@@ -1,4 +1,38 @@
-#ADAM登录程序说明
+# ADAM登录程序说明
+
+
+## 未实现功能及特性
+
+* 数据文件新增sqlite3格式，暂时保留两种数据格式，最终去除file模式
+* 支持file格式升级到sqlite3格式（需要完成sqlite3）
+* 新增sqlite模式自动备份机制（需要完成sqlite3）
+* 删除old模式（已完成）
+* 删除fast-file模式登录，并根据sqlite格式新增fast模式（需要完成sqlite3）
+* 选项模块修改为argparse（已完成）
+* 完成主机信息编辑，包括信息修改，显示顺序修改等（需要完成sqlite3）
+* 新增主机多级分组机制（需要完成sqlite3）
+* 未来版本讲抛弃pexpect，使用paramiko获取终端
+* 重构代码结构
+
+## 0.3-beta
+
+* 删除old模式
+* 删除fast-file模式登录
+* 新增帮助信息程序描述
+* 添加参数项组以及子参数配置
+* 优化部分代码流程
+* 新增添加主机记录时可指定用户名、端口、密码
+* bug修复，兼容性修复（-a添加主机的匹配结果问题，-c的python3兼容问题）
+* bug修复，修复传输文件时-s后-n选项失效问题
+* bug修复，修复传输文件时-a首次添加ip依然出现交互列表的bug
+* 优化-s搜索模式，输入全ip自动精确匹配
+* 修复文件传输时，-n指定机器编号无法执行问题
+
+## 0.2-beta
+
+* optparse修改为argparse
+* 新增argparse参数v
+* fast主机操作中sys.argv修改为argparse.v参数
 
 ## 0.1-beta
 
@@ -25,16 +59,7 @@
 * 保留fast-file模式登录
 * 菜单模块使用optparse
 
-### 未实现功能及特性
-
-* 数据文件新增sqlite3格式，暂时保留两种数据格式，最终去除file模式
-* 支持file格式升级到sqlite3格式（需要完成sqlite3）
-* 新增sqlite模式自动备份机制（需要完成sqlite3）
-* 删除old模式（已完成）
-* 删除fast-file模式登录，并根据sqlite格式新增fast模式（需要完成sqlite3）
-* 选项模块修改为argparse（已完成）
-* 完成主机信息编辑，包括信息修改，显示顺序修改等（需要完成sqlite3）
-* 新增主机多级分组机制（需要完成sqlite3）
+### 老版本help
 
 ``` bash
 Usage: a [OPTIONS]
@@ -64,6 +89,8 @@ Options:
                         模糊匹配主机信息
   -o, --old             old-sh-file模式登陆主机
 ```
+
+### 新版本help
 
 ``` bash
 usage: a [-h] [--version] [-a ip] [-c 'cmd1,cmd2,...'] [-e] [-d ip]
@@ -98,22 +125,4 @@ optional arguments:
   -o, --old             old-sh-file模式登陆主机
 ```
 
-## 0.2-beta
 
-* optparse修改为argparse
-* 新增argparse参数v
-* fast主机操作中sys.argv修改为argparse.v参数
-
-## 0.3-beta
-
-* 删除old模式
-* 删除fast-file模式登录
-* 新增帮助信息程序描述
-* 添加参数项组以及子参数配置
-* 优化部分代码流程
-* 新增添加主机记录时可指定用户名、端口、密码
-* bug修复，兼容性修复（-a添加主机的匹配结果问题，-c的python3兼容问题）
-* bug修复，修复传输文件时-s后-n选项失效问题
-* bug修复，修复传输文件时-a首次添加ip依然出现交互列表的bug
-* 优化-s搜索模式，输入全ip自动精确匹配
-* 修复文件传输时，-n指定机器编号无法执行问题
