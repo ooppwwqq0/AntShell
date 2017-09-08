@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # -*- coding:utf-8 -*-
 
 #######################################################################
@@ -9,13 +9,397 @@ from __future__ import print_function
 import os, sys
 import datetime, time, threading
 import yaml, sh, stat, re
-import pexpect, paramiko
+import paramiko
 from tqdm import tqdm
 import argparse
+import pyte
+import struct, fcntl, signal, socket, select
+try:
+    import termios
+    import tty
+except ImportError:
+    time.sleep(3)
+    sys.exit()
+
 
 if sys.version < '3':
     reload(sys)
     sys.setdefaultencoding('utf-8')
+
+class GetConf(object):
+    def __init__(self):
+        self.CONF = "/data/profile/adam-git/conf.yml"
+        self.c = self.conf(o=True)
+
+    def _par(self, k):
+        """动态生成类+属性"""
+        class o : pass
+        for key in k:
+            if str(type(k[key])) == "<type 'dict'>":
+                setattr(o, key, self._par(k[key]))
+            else:
+                setattr(o, key, k[key])
+        return o
+
+    def getPath(self, args, L=False):
+        """生成绝对路径"""
+
+        path = "" if L else self.HOME
+        for val in args:
+            path = os.path.join(path, val)
+        return path
+
+    def conf(self, k=None, o=False):
+        """获取配置文件"""
+        conf = yaml.load(open(self.CONF))
+        conf["HOME"] = os.environ['HOME']
+        conf["PWD"] = os.path.dirname(__file__)
+        if o:
+            return conf
+        return conf[k] if k else self._par(conf)
+
+
+class Tty(object):
+    """
+    一个虚拟终端类，实现连接ssh和记录日志，基类
+    """
+    def __init__(self, k, login_type='ssh'):
+        self.k = k
+        self.ip = None
+        self.port = 22
+        self.ssh = None
+        self.channel = None
+        self.remote_ip = ''
+        self.login_type = login_type
+        self.vim_flag = False
+        self.vim_end_pattern = re.compile(r'\x1b\[\?1049', re.X)
+        self.vim_data = ''
+        self.stream = None
+        self.screen = None
+        self.__init_screen_stream()
+
+    def __init_screen_stream(self):
+        """
+        初始化虚拟屏幕和字符流
+        """
+        self.stream = pyte.ByteStream()
+        self.screen = pyte.Screen(80, 24)
+        self.stream.attach(self.screen)
+
+    @staticmethod
+    def is_output(strings):
+        newline_char = ['\n', '\r', '\r\n']
+        for char in newline_char:
+            if char in strings:
+                return True
+        return False
+
+    @staticmethod
+    def command_parser(command):
+        """
+        处理命令中如果有ps1或者mysql的特殊情况,极端情况下会有ps1和mysql
+        :param command:要处理的字符传
+        :return:返回去除PS1或者mysql字符串的结果
+        """
+        result = None
+        match = re.compile('\[?.*@.*\]?[\$#]\s').split(command)
+        if match:
+            # 只需要最后的一个PS1后面的字符串
+            result = match[-1].strip()
+        else:
+            # PS1没找到,查找mysql
+            match = re.split('mysql>\s', command)
+            if match:
+                # 只需要最后一个mysql后面的字符串
+                result = match[-1].strip()
+        return result
+
+    def deal_command(self, data):
+        """
+        处理截获的命令
+        :param data: 要处理的命令
+        :return:返回最后的处理结果
+        """
+        command = ''
+        try:
+            self.stream.feed(data)
+            # 从虚拟屏幕中获取处理后的数据
+            for line in reversed(self.screen.buffer):
+                line_data = "".join(map(operator.attrgetter("data"), line)).strip()
+                if len(line_data) > 0:
+                    parser_result = self.command_parser(line_data)
+                    if parser_result is not None:
+                        # 2个条件写一起会有错误的数据
+                        if len(parser_result) > 0:
+                            command = parser_result
+                    else:
+                        command = line_data
+                    break
+        except Exception:
+            pass
+        # 虚拟屏幕清空
+        self.screen.reset()
+        return command
+
+    def get_log(self):
+        """
+        Logging user command and output.
+        记录用户的日志
+        """
+        tty_log_dir = os.path.join(LOG_DIR, 'tty')
+        date_today = datetime.datetime.now()
+        date_start = date_today.strftime('%Y%m%d')
+        time_start = date_today.strftime('%H%M%S')
+        today_connect_log_dir = os.path.join(tty_log_dir, date_start)
+        log_file_path = os.path.join(today_connect_log_dir, '%s_%s_%s' % (self.username, self.asset_name, time_start))
+
+        try:
+            mkdir(os.path.dirname(today_connect_log_dir), mode=777)
+            mkdir(today_connect_log_dir, mode=777)
+        except OSError:
+            logger.debug('创建目录 %s 失败，请修改%s目录权限' % (today_connect_log_dir, tty_log_dir))
+            raise ServerError('创建目录 %s 失败，请修改%s目录权限' % (today_connect_log_dir, tty_log_dir))
+
+        try:
+            log_file_f = open(log_file_path + '.log', 'a')
+            log_time_f = open(log_file_path + '.time', 'a')
+        except IOError:
+            logger.debug('创建tty日志文件失败, 请修改目录%s权限' % today_connect_log_dir)
+            raise ServerError('创建tty日志文件失败, 请修改目录%s权限' % today_connect_log_dir)
+
+        if self.login_type == 'ssh':  # 如果是ssh连接过来，记录connect.py的pid，web terminal记录为日志的id
+            pid = os.getpid()
+            self.remote_ip = remote_ip  # 获取远端IP
+        else:
+            pid = 0
+
+        log = Log(user=self.username, host=self.asset_name, remote_ip=self.remote_ip, login_type=self.login_type,
+                  log_path=log_file_path, start_time=date_today, pid=pid)
+        log.save()
+        if self.login_type == 'web':
+            log.pid = log.id  # 设置log id为websocket的id, 然后kill时干掉websocket
+            log.save()
+
+        log_file_f.write('Start at %s\r\n' % datetime.datetime.now())
+        return log_file_f, log_time_f, log
+
+    def get_connect_info(self):
+        """
+        获取需要登陆的主机的信息和映射用户的账号密码
+        """
+        asset_info = get_asset_info(self.asset)
+        role_key = get_role_key(self.user, self.role)  # 获取角色的key，因为ansible需要权限是600，所以统一生成用户_角色key
+        role_pass = CRYPTOR.decrypt(self.role.password)
+        connect_info = {'user': self.user, 'asset': self.asset, 'ip': asset_info.get('ip'),
+                        'port': int(asset_info.get('port')), 'role_name': self.role.name,
+                        'role_pass': role_pass, 'role_key': role_key}
+        logger.debug(connect_info)
+        return connect_info
+
+    def get_connection(self):
+        """
+        获取连接成功后的ssh
+        """
+        #connect_info = self.get_connect_info()
+
+        c = C.c
+        # 发起ssh连接请求 Make a ssh connection
+        ssh = paramiko.SSHClient()
+        # ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            key_path = c.get("KEY_PATH")
+            if key_path and os.path.isfile(key_path):
+                try:
+                    ssh.connect(
+                        self.k.get("ip"),
+                        port=int(self.k.get("port")),
+                        username=c.get("USER"),
+                        password=c.get("PASS"),
+                        key_filename=key_path,
+                        look_for_keys=False
+                    )
+                    return ssh
+                except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException):
+                    #logger.warning(u'使用ssh key %s 失败, 尝试只使用密码' % role_key)
+                    pass
+
+            ssh.connect(
+                self.k.get("ip"),
+                port=int(self.k.get("port")),
+                username=c.get("USER"),
+                password=c.get("PASS"),
+                allow_agent=False,
+                look_for_keys=False
+            )
+
+        except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException):
+            pass
+        except socket.error:
+            pass
+        else:
+            self.ssh = ssh
+            return ssh
+
+
+class SshTty(Tty):
+    """
+    一个虚拟终端类，实现连接ssh和记录日志
+    """
+
+    @staticmethod
+    def get_win_size():
+        """
+        获得terminal窗口大小
+        """
+        if 'TIOCGWINSZ' in dir(termios):
+            TIOCGWINSZ = termios.TIOCGWINSZ
+        else:
+            TIOCGWINSZ = 1074295912
+        s = struct.pack('HHHH', 0, 0, 0, 0)
+        x = fcntl.ioctl(sys.stdout.fileno(), TIOCGWINSZ, s)
+        return struct.unpack('HHHH', x)[0:2]
+
+    def set_win_size(self, sig, data):
+        """
+        设置terminal窗口大小
+        """
+        try:
+            win_size = self.get_win_size()
+            self.channel.resize_pty(height=win_size[0], width=win_size[1])
+        except Exception:
+            pass
+
+    def posix_shell(self):
+        """
+        Use paramiko channel connect server interactive.
+        使用paramiko模块的channel，连接后端，进入交互式
+        """
+        #log_file_f, log_time_f, log = self.get_log()
+        #termlog = TermLogRecorder("wangping")
+        #termlog.setid(1)
+        old_tty = termios.tcgetattr(sys.stdin)
+        pre_timestamp = time.time()
+        data = ''
+        input_mode = False
+        try:
+            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
+            self.channel.settimeout(0.0)
+
+            while True:
+                try:
+                    r, w, e = select.select([self.channel, sys.stdin], [], [])
+                    flag = fcntl.fcntl(sys.stdin, fcntl.F_GETFL, 0)
+                    #fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flag|os.O_NONBLOCK)
+                except Exception:
+                    pass
+
+                if self.channel in r:
+                    try:
+                        x = self.channel.recv(1024)
+                        if len(x) == 0:
+                            break
+
+                        index = 0
+                        len_x = len(x)
+                        while index < len_x:
+                            try:
+                                n = os.write(sys.stdout.fileno(), x[index:])
+                                sys.stdout.flush()
+                                index += n
+                            except OSError as msg:
+                                if msg.errno == errno.EAGAIN:
+                                    continue
+                        now_timestamp = time.time()
+                        #termlog.write(x)
+                        #termlog.recoder = False
+                        #log_time_f.write('%s %s\n' % (round(now_timestamp-pre_timestamp, 4), len(x)))
+                        #log_time_f.flush()
+                        #log_file_f.write(x)
+                        #log_file_f.flush()
+                        pre_timestamp = now_timestamp
+                        #log_file_f.flush()
+
+                        self.vim_data += x
+                        if input_mode:
+                            data += x
+
+                    except socket.timeout:
+                        pass
+
+                if sys.stdin in r:
+                    try:
+                        x = os.read(sys.stdin.fileno(), 4096)
+                    except OSError:
+                        pass
+                    #termlog.recoder = True
+                    input_mode = True
+                    if self.is_output(str(x)):
+                        # 如果len(str(x)) > 1 说明是复制输入的
+                        if len(str(x)) > 1:
+                            data = x
+                        match = self.vim_end_pattern.findall(self.vim_data)
+                        if match:
+                            if self.vim_flag or len(match) == 2:
+                                self.vim_flag = False
+                            else:
+                                self.vim_flag = True
+                        elif not self.vim_flag:
+                            self.vim_flag = False
+                            data = self.deal_command(data)[0:200]
+                            #if data is not None:
+                                #TtyLog(log=log, datetime=datetime.datetime.now(), cmd=data).save()
+                        data = ''
+                        self.vim_data = ''
+                        input_mode = False
+
+                    if len(x) == 0:
+                        break
+                    self.channel.send(x)
+
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
+            #log_file_f.write('End time is %s' % datetime.datetime.now())
+            #log_file_f.close()
+            #log_time_f.close()
+            #termlog.save()
+            #log.filename = termlog.filename
+            #log.is_finished = True
+            #log.end_time = datetime.datetime.now()
+            #log.save()
+
+    def connect(self):
+        """
+        Connect server.
+        连接服务器
+        """
+        # 发起ssh连接请求 Make a ssh connection
+        ssh = self.get_connection()
+
+        transport = ssh.get_transport()
+        transport.set_keepalive(30)
+        transport.use_compression(True)
+
+        # 获取连接的隧道并设置窗口大小 Make a channel and set windows size
+        global channel
+        win_size = self.get_win_size()
+        # self.channel = channel = ssh.invoke_shell(height=win_size[0], width=win_size[1], term='xterm')
+        self.channel = channel = transport.open_session()
+        channel.get_pty(term='xterm', height=win_size[0], width=win_size[1])
+        channel.invoke_shell()
+        try:
+            signal.signal(signal.SIGWINCH, self.set_win_size)
+        except:
+            pass
+
+        self.posix_shell()
+
+        # Shutdown channel socket
+        channel.close()
+        transport.close()
+        ssh.close()
+
 
 class BaseHandle(object):
     """处理配置文件以及共用参数"""
@@ -23,21 +407,30 @@ class BaseHandle(object):
     def __init__(self):
         """初始化"""
 
-        CONF = "/data/profile/adam/conf.yml"
-        self.HOME = os.environ['HOME']
-        self.PWD = os.path.dirname(__file__)
-        yf = open(CONF)
-        self.conf = yaml.load(yf)
-        self.o = self.par(self.conf)
-        self.sshfile = self.getPath(self.conf["ODB_FILE"])
-        self.kfile = self.getPath(self.conf["K_FILE"])
+        C = GetConf()
+        self.conf = C.conf(o=True)
+        self.HOME = self.conf["HOME"]
+        self.PWD = self.conf["PWD"]
+        self.sshfile = self.getPath([self.conf["ODB_FILE"]])
+        self.kfile = self.getPath([self.conf["K_FILE"]])
         self.rows, self.columns = os.popen("stty size","r").read().split()
-        self.Red = "\033[1;31m{0}\033[0m"
-        self.Yel = "\033[1;33m{0}\033[0m"
-        self.Blue = "\033[1;34m{0}\033[0m"
-        self.Pink = "\033[1;35m{0}\033[0m"
-        self.Lblue = "\033[1;36m{0}\033[0m"
-        self.ColorSign = self.Red.format("#")
+        self.ColorSign = self.colorMsg(flag=True).format("#")
+
+    def colorMsg(self, m="", c="red", flag=False):
+        colorSign = {
+            "red" : "\033[1;31m{0}\033[0m",
+            "green" : "\033[1;32m{0}\033[0m",
+            "yellow" : "\033[1;33m{0}\033[0m",
+            "blue" : "\033[1;34m{0}\033[0m",
+            "pink" : "\033[1;35m{0}\033[0m",
+            "blue" : "\033[1;36m{0}\033[0m",
+        }
+        msg = colorSign.get(c).format(m)
+        if flag:
+            return colorSign.get(c)
+        else:
+            print(msg)
+            return msg
 
     def oldGetHost(self, include = None, pattern = False, match = False):
         """获取主机信息,old数据
@@ -58,29 +451,25 @@ class BaseHandle(object):
                 lines = line.rstrip().rsplit('|')
                 ahost[key] = dict(zip(host_key, lines))
                 key += 1
-                if includes:
-                    try:
-                        for ic in includes:
-                            if match:
-                                if ic != lines[1]:
-                                    raise Continue()
-                            elif len(lines) > 1:
-                                if ic not in lines[1] and ic not in lines[0]:
-                                    raise Continue()
-                            else:
-                                raise Continue()
-                    except Continue:
-                        continue
-                    nhost[ikey] = dict(zip(host_key, lines))
-                    ikey += 1
+        if includes:
+            if match:
+                res = list(filter(lambda x:ahost[x]["ip"] in includes, ahost))
+            else:
+                def filterNomatch(k):
+                    f = list(filter(lambda x:x in ahost[k]["name"] or x in ahost[k]["ip"], includes))
+                    return k if f else False
+                res = list(filter(filterNomatch, ahost))
+            for i in res:
+                nhost[ikey] = ahost[i]
+                ikey += 1
         if len(nhost) != 0 or pattern:
             return nhost
         return ahost
 
-    def getPath(self, *args, LO =False):
+    def getPath(self, args, L=False):
         """生成绝对路径"""
 
-        path = "" if LO else self.HOME
+        path = "" if L else self.HOME
         for val in args:
             path = os.path.join(path, val)
         return path
@@ -107,19 +496,6 @@ class BaseHandle(object):
             cmds = args.rsplit(sepa)
             return cmds
 
-    def par(self, k):
-        """动态生成类+属性"""
-        class o : pass
-        for key in k:
-            if str(type(k[key])) == "<type 'dict'>":
-                setattr(o, key, self.par(k[key]))
-            else:
-                setattr(o, key, k[key])
-        return o
-
-class Continue(Exception):
-    """处理跳出循环"""
-    pass
 
 class ProgHandle(object):
     """文件传输进度条tqdm"""
@@ -134,11 +510,15 @@ class ProgHandle(object):
         self.t.update(transferred - self.last_b)
         self.last_b = transferred
 
-class HostHandle(BaseHandle):
-    """处理主机列表"""
+
+class InfoHandle(BaseHandle):
+    """主机交互列表"""
 
     def __init__(self):
         BaseHandle.__init__(self)
+        self.mode = option.mode
+        self.hinfo = self.oldGetHost()
+        self.Hlen = len(self.hinfo)
 
     def addList(self):
         """添加主机信息"""
@@ -148,7 +528,7 @@ class HostHandle(BaseHandle):
             res = self.oldGetHost(ip, True, True)
 
             if len(res) == 1:
-                print(self.Red.format("already exist !"))
+                self.colorMsg("already exist !")
             elif len(res) == 0:
                 u = self.conf["USERINFO"]
                 user = option.user if option.user else u["USER"]
@@ -163,7 +543,7 @@ class HostHandle(BaseHandle):
                 sys.exit()
             return self.oldGetHost(ip, True, True)
         else:
-            print(self.Red.format("wrong ip !"))
+            self.colorMsg("wrong ip !")
             sys.exit()
 
     def delList(self):
@@ -177,21 +557,12 @@ class HostHandle(BaseHandle):
                 os.system("sed -i '' '/|%s|/d' %s" % (ip,self.sshfile))
                 print(self.Blue.format("del ip %s success !" % ip))
             elif len(res) == 0:
-                print(self.Red.format("ip %s not exist !" % ip))
+                self.colorMsg("ip %s not exist !" % ip)
             else:
                 print(res)
         else:
-            print(self.Red.format("wrong ip !"))
+            self.colorMsg("wrong ip !")
         sys.exit()
-
-class InfoHandle(BaseHandle):
-    """主机交互列表"""
-
-    def __init__(self):
-        BaseHandle.__init__(self)
-        self.mode = option.mode
-        self.hinfo = self.oldGetHost()
-        self.Hlen = len(self.hinfo)
 
     def hostLists(self):
         """打印主机列表"""
@@ -207,7 +578,7 @@ class InfoHandle(BaseHandle):
         n = mode * count + mode -2
 
         BorderLine = self.ColorSign * mode * (count + 1)
-        CenterLine = self.ColorSign + self.Red + self.ColorSign
+        CenterLine = self.ColorSign + self.colorMsg(flag=True) + self.ColorSign
         HeadLine = self.ColorSign + "{0}"
         TailLine = "{0}" + self.ColorSign
 
@@ -246,8 +617,8 @@ class InfoHandle(BaseHandle):
         self.hostLists()
         while num == 0:
             try:
-                print("input num or [ 'q' | ctrl-c ] to quit!")
-                n = input("Server Id: ")
+                msg = """input num or [ 'q' | ctrl-c ] to quit!\nServer Id: """
+                n = input(self.colorMsg(c="green",flag=True).format(msg))
                 if n == 'q':
                     sys.exit()
                 else:
@@ -260,52 +631,6 @@ class InfoHandle(BaseHandle):
             except KeyboardInterrupt as e:
                 sys.exit("\r")
         return num
-
-class ConnHandle(BaseHandle):
-    """处理连接主机"""
-
-    def __init__(self):
-        BaseHandle.__init__(self)
-        self.ox = self.conf["XFILE"]
-        self.hinfo = self.oldGetHost()
-        self.Hlen = len(self.hinfo)
-
-    def exsend(self, e, line):
-        e.logfile = None
-        e.sendline(line)
-        e.logfile = sys.stdout.buffer
-
-    def exConn(self, **k):
-        """采用pexcept模块执行"""
-
-        ec = "ssh -p%s -l %s %s" % (k["port"], k["user"], k["ip"])
-        e = pexpect.spawn(ec)
-        e.logfile = sys.stdout.buffer
-        flag = True
-        try:
-            while flag:
-                i = e.expect(["continue connecting (yes/no)?", "password: ", ".*[\$#]"])
-                if i == 0:
-                    self.exsend(e, "yes")
-                if i == 1:
-                    self.exsend(e, str(k["passwd"]))
-                if i == 2:
-                    if k["sudo"] == '1' and k["user"] != "root":
-                        self.exsend(e, "sudo su -")
-                    if option.commod:
-                        cmds = self.getArgs(option.commod)
-                        for c in cmds:
-                            self.exsend(e, c)
-                    flag = False
-            e.logfile = None
-            e.setwinsize(int(self.rows), int(self.columns))
-            e.interact(chr(29))
-        except pexpect.EOF:
-            print("EOF")
-        except pexpect.TIMEOUT:
-            print("TIMEOUT")
-        finally:
-            e.close()
 
     def getConn(self, n = None):
         """处理生成登陆信息"""
@@ -333,6 +658,7 @@ class ConnHandle(BaseHandle):
         choose = {1:self.hinfo[num]}
         return choose
 
+
 class ParaHandle(BaseHandle):
     """paramiko"""
 
@@ -343,7 +669,7 @@ class ParaHandle(BaseHandle):
 
     def auth_key(self):
         """获取本地private_key"""
-        key_path = self.getPath(self.conf["KEY_PATH"])
+        key_path = c.get("KEY_PATH")
         try:
             key = paramiko.RSAKey.from_private_key_file(key_path)
         except paramiko.PasswordRequiredException:
@@ -357,7 +683,7 @@ class ParaHandle(BaseHandle):
         print(self.Lblue.format("%s start" % k["ip"]))
         cmds = self.getArgs(option.commod)
         for cmd in cmds:
-            print(self.Yel.format("  exec commod : " + cmd))
+            self.colorMsg("  exec commod : " + cmd,"yellow")
             if k["sudo"] == '1' and k["user"] != "root":
                 cmd = "sudo " + cmd
             stdin, stdout, stderr = p.exec_command(cmd)
@@ -385,23 +711,23 @@ class ParaHandle(BaseHandle):
         try:
             file_name = option.file if option.file else  os.path.basename(option.get)
             if option.get:
-                remotepath = self.getPath(option.get, file_name)
-                localpath = self.getPath(self.base_path, file_name)
-                print(self.Yel.format("  remote path : " + remotepath + "  >>>  local path : " + localpath))
+                remotepath = self.getPath([option.get, file_name])
+                localpath = self.getPath([self.base_path, file_name])
+                self.colorMsg("  remote path : " + remotepath + "  >>>  local path : " + localpath)
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
                     p = ProgHandle(t)
                     sftp.get(remotepath, localpath, callback = p.progressBar)
                 print("\t下载文件成功")
             elif option.put:
                 localpath = os.path.join(self.base_path, option.file)
-                remotepath = self.getPath(option.put, option.file)
-                print(self.Yel.format("  local path : " + localpath + "  >>>  remote path : " + remotepath))
+                remotepath = self.getPath([option.put, option.file])
+                self.colorMsg("  local path : " + localpath + "  >>>  remote path : " + remotepath)
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
                     p = ProgHandle(t)
                     sftp.put(localpath, remotepath, callback = p.progressBar)
                 print('\t上传文件成功')
         except Exception as e:
-            print(self.Red.format('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e)))
+            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
 
     def para(self, **k):
         """采用paramiko模块执行"""
@@ -418,7 +744,7 @@ class ParaHandle(BaseHandle):
 
                 self.paraSftp(k, sftp)
             except Exception as e:
-                print(self.Red.format('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e)))
+                self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
             finally:
                 t.close()
         elif option.commod:
@@ -436,7 +762,7 @@ class ParaHandle(BaseHandle):
                 ch.settimeout(5)
                 self.paraComm(p, ch, k)
             except Exception as e:
-                print(self.Red.format('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e)))
+                self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
             finally:
                 p.close()
         else:
@@ -445,12 +771,12 @@ class ParaHandle(BaseHandle):
     def thstart(self, ca = None, choose = None):
         """处理多线程任务"""
 
-        conn = ConnHandle()
+        info = InfoHandle()
         if ca:
             pchoose = ca
         elif option.search or option.num or option.args:
-            pchoose = self.hinfo if len(self.hinfo) == 1 else conn.getConn(option.num)
-        print(self.Red.format("=== Starting %s ===" % datetime.datetime.now()))
+            pchoose = self.hinfo if len(self.hinfo) == 1 else info.getConn(option.num)
+        self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
         threads = []
         for ki in pchoose:
             th = threading.Thread(target = self.para(**pchoose[ki]))
@@ -458,8 +784,9 @@ class ParaHandle(BaseHandle):
             threads.append(th)
         for th in threads:
             th.join()
-        print(self.Red.format("=== Ending %s ===" % datetime.datetime.now()))
+        self.colorMsg("=== Ending %s ===" % datetime.datetime.now())
         sys.exit()
+
 
 class Parser(BaseHandle):
     """参数设置"""
@@ -529,34 +856,36 @@ class Parser(BaseHandle):
                             help="%s" %self.lang["fs"], default=",", metavar="','")
         return parser
 
+
 def main():
     """主函数"""
 
     info = InfoHandle()
-    conn = ConnHandle()
-    host = HostHandle()
     pa = ParaHandle()
 
     if option.lists:
         info.hostLists()
         sys.exit()
-    ca = host.addList() if option.add else ""
+    ca = info.addList() if option.add else ""
     if option.dels:
-        host.delList()
+        info.delList()
 
     if option.para or option.get or option.put:
         pa.thstart(ca)
     try:
-        choose = ca if ca else conn.getConn(option.num)
+        choose = ca if ca else info.getConn(option.num)
         #clear = os.system('clear')
         print(choose)
-        conn.exConn(**choose[1])
+        ssh_tty = SshTty(choose[1])
+        ssh_tty.connect()
         sys.exit()
     except Exception as e:
         print(e)
         print(parser.print_help())
 
+
 if __name__ == "__main__":
     parser = Parser().Argparser()
     option = parser.parse_args()
+    C = GetConf()
     main()
