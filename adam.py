@@ -8,12 +8,14 @@
 from __future__ import print_function
 import os, sys
 import datetime, time, threading
-import yaml, sh, stat, re
-import paramiko
-from tqdm import tqdm
+import yaml, re
 import argparse
+import paramiko
+import ansible
+import sqlite3
 import pyte
 import struct, fcntl, signal, socket, select
+from tqdm import tqdm
 try:
     import termios
     import tty
@@ -214,12 +216,14 @@ class Tty(object):
                     ssh.connect(
                         self.k.get("ip"),
                         port=int(self.k.get("port")),
-                        username=c.get("USER"),
-                        password=c.get("PASS"),
+                        username=self.k.get("user"),
+                        password=self.k.get("passwd"),
                         key_filename=key_path,
                         look_for_keys=False
                     )
                     return ssh
+                except Exception as e:
+                    print(e)
                 except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException):
                     #logger.warning(u'使用ssh key %s 失败, 尝试只使用密码' % role_key)
                     pass
@@ -227,12 +231,14 @@ class Tty(object):
             ssh.connect(
                 self.k.get("ip"),
                 port=int(self.k.get("port")),
-                username=c.get("USER"),
-                password=c.get("PASS"),
+                username=self.k.get("user"),
+                password=self.k.get("passwd"),
                 allow_agent=False,
                 look_for_keys=False
             )
 
+        except Exception as e:
+            print(e)
         except (paramiko.ssh_exception.AuthenticationException, paramiko.ssh_exception.SSHException):
             pass
         except socket.error:
@@ -276,8 +282,6 @@ class SshTty(Tty):
         使用paramiko模块的channel，连接后端，进入交互式
         """
         #log_file_f, log_time_f, log = self.get_log()
-        #termlog = TermLogRecorder("wangping")
-        #termlog.setid(1)
         old_tty = termios.tcgetattr(sys.stdin)
         pre_timestamp = time.time()
         data = ''
@@ -287,6 +291,8 @@ class SshTty(Tty):
             tty.setcbreak(sys.stdin.fileno())
             self.channel.settimeout(0.0)
 
+            #if k["sudo"] == '1' and k["user"] != "root":
+            self.channel.send("sudo su -\r")
             while True:
                 try:
                     r, w, e = select.select([self.channel, sys.stdin], [], [])
@@ -312,8 +318,6 @@ class SshTty(Tty):
                                 if msg.errno == errno.EAGAIN:
                                     continue
                         now_timestamp = time.time()
-                        #termlog.write(x)
-                        #termlog.recoder = False
                         #log_time_f.write('%s %s\n' % (round(now_timestamp-pre_timestamp, 4), len(x)))
                         #log_time_f.flush()
                         #log_file_f.write(x)
@@ -333,7 +337,6 @@ class SshTty(Tty):
                         x = os.read(sys.stdin.fileno(), 4096)
                     except OSError:
                         pass
-                    #termlog.recoder = True
                     input_mode = True
                     if self.is_output(str(x)):
                         # 如果len(str(x)) > 1 说明是复制输入的
@@ -371,21 +374,19 @@ class SshTty(Tty):
 
     def connect(self):
         """
-        Connect server.
         连接服务器
         """
         # 发起ssh连接请求 Make a ssh connection
         ssh = self.get_connection()
 
-        transport = ssh.get_transport()
-        transport.set_keepalive(30)
-        transport.use_compression(True)
+        tran = ssh.get_transport()
+        tran.set_keepalive(30)
+        tran.use_compression(True)
 
         # 获取连接的隧道并设置窗口大小 Make a channel and set windows size
         global channel
         win_size = self.get_win_size()
-        # self.channel = channel = ssh.invoke_shell(height=win_size[0], width=win_size[1], term='xterm')
-        self.channel = channel = transport.open_session()
+        self.channel = channel = tran.open_session()
         channel.get_pty(term='xterm', height=win_size[0], width=win_size[1])
         channel.invoke_shell()
         try:
@@ -397,7 +398,7 @@ class SshTty(Tty):
 
         # Shutdown channel socket
         channel.close()
-        transport.close()
+        tran.close()
         ssh.close()
 
 
@@ -406,18 +407,38 @@ class BaseHandle(object):
 
     def __init__(self):
         """初始化"""
-
         C = GetConf()
         self.conf = C.conf(o=True)
         self.HOME = self.conf["HOME"]
         self.PWD = self.conf["PWD"]
         self.sshfile = self.getPath([self.conf["ODB_FILE"]])
-        self.kfile = self.getPath([self.conf["K_FILE"]])
         self.rows, self.columns = os.popen("stty size","r").read().split()
         self.ColorSign = self.colorMsg(flag=True).format("#")
+        self.db = self._db()
+
+    def _dict_factory(self,cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            if col[0] =="id":
+                index = row[idx]
+                continue
+            d[col[0]] = row[idx]
+        return (index, d)
+
+    def _db(self):
+        db_file = self.conf.get("DB_FILE")
+        self.conn = sqlite3.connect(db_file)
+        self.conn.row_factory = self._dict_factory
+        db = self.conn.cursor()
+        return db
+
+    def _commit(self):
+        self.conn.commit()
+        self.conn.close()
 
     def colorMsg(self, m="", c="red", flag=False):
         colorSign = {
+            "xx" : "\033[32m{0}\033[0m",
             "red" : "\033[1;31m{0}\033[0m",
             "green" : "\033[1;32m{0}\033[0m",
             "yellow" : "\033[1;33m{0}\033[0m",
@@ -466,6 +487,39 @@ class BaseHandle(object):
             return nhost
         return ahost
 
+    def searchHost(self, include = None, pattern = False, match = False):
+        """获取主机信息, 基于sqlite3
+            include : 用于过滤列表
+            pattern : 开启返回空字典，默认False（不返回）
+            match : 开启精确匹配模式，默认False（模糊匹配）
+        """
+
+        include = option.search if option.search else include
+        if include:
+            match = True if self.isIp(include, True) else match
+        includes = self.getArgs(include)
+        ahost, nhost = {}, {}
+        ikey = 1
+        sql = """select id,name,ip,user,passwd,port,sudo
+            from hosts where 1=1 {0} order by sort;"""
+        self.db.execute(sql.format(""))
+        for k in self.db:
+            ahost[k[0]] = k[1]
+        if includes:
+            if match:
+                res = list(filter(lambda x:ahost[x]["ip"] in includes, ahost))
+            else:
+                def filterNomatch(k):
+                    f = list(filter(lambda x:x in ahost[k]["name"] or x in ahost[k]["ip"], includes))
+                    return k if f else False
+                res = list(filter(filterNomatch, ahost))
+            for i in res:
+                nhost[ikey] = ahost[i]
+                ikey += 1
+        if len(nhost) != 0 or pattern:
+            return nhost
+        return ahost
+
     def getPath(self, args, L=False):
         """生成绝对路径"""
 
@@ -485,16 +539,14 @@ class BaseHandle(object):
         qi = map(int, filter(lambda x: x.isdigit(), q))
         return len(q) == l and len(list(filter(lambda x: x >= 0 and x <= 255, qi))) == l
 
-    def getArgs(self, args):
+    def getArgs(self, args=""):
         """参数处理
             args : 原始参数
             sepa : 分隔符，默认","
         """
         sepa = option.fs if option.fs else ","
-
-        if args:
-            cmds = args.rsplit(sepa)
-            return cmds
+        cmds = args.rsplit(sepa) if args else False
+        return cmds
 
 
 class ProgHandle(object):
@@ -517,7 +569,7 @@ class InfoHandle(BaseHandle):
     def __init__(self):
         BaseHandle.__init__(self)
         self.mode = option.mode
-        self.hinfo = self.oldGetHost()
+        self.hinfo = self.searchHost()
         self.Hlen = len(self.hinfo)
 
     def addList(self):
@@ -525,23 +577,23 @@ class InfoHandle(BaseHandle):
         ipt = self.isIp(option.add, True)
         if ipt:
             ip = option.add
-            res = self.oldGetHost(ip, True, True)
+            res = self.searchHost(ip, True, True)
 
             if len(res) == 1:
                 self.colorMsg("already exist !")
             elif len(res) == 0:
-                u = self.conf["USERINFO"]
-                user = option.user if option.user else u["USER"]
-                passwd = option.passwd if option.passwd else u["PASS"]
-                port = option.port if option.port else u["PORT"]
+                user = option.user if option.user else self.conf.get("USER")
+                passwd = option.passwd if option.passwd else self.conf.get("PASS")
+                port = option.port if option.port else self.conf.get("PORT")
                 sudo = 0 if passwd else 1
-                record = "{0}|{0}|{1}|{2}|{3}|{4}".format(ip, user, passwd, port, sudo)
-                with open(self.sshfile, 'a') as ahost:
-                    ahost.write(record + "\n")
+                sql = """insert into hosts(name,ip,user,passwd,port,sudo)
+                    values('{0}','{0}','{1}','{2}',{3},{4})""".format(ip, user, passwd, port, sudo)
+                self.db.execute(sql)
+                self._commit()
             else:
                 print(res)
                 sys.exit()
-            return self.oldGetHost(ip, True, True)
+            return self.searchHost(ip, True, True)
         else:
             self.colorMsg("wrong ip !")
             sys.exit()
@@ -551,20 +603,22 @@ class InfoHandle(BaseHandle):
         ipt = self.isIp(option.dels, True)
         if ipt:
             ip = option.dels
-            res = self.oldGetHost(ip, True, True)
+            res = self.searchHost(ip, True, True)
 
+            print(ip)
             if len(res) == 1:
-                os.system("sed -i '' '/|%s|/d' %s" % (ip,self.sshfile))
-                print(self.Blue.format("del ip %s success !" % ip))
+                sql = """delete from hosts where ip='{0}';""".format(ip)
+                self.db.execute(sql)
+                self._commit()
+                self.colorMsg("del ip %s success !" % ip,"blue")
             elif len(res) == 0:
                 self.colorMsg("ip %s not exist !" % ip)
             else:
                 print(res)
         else:
             self.colorMsg("wrong ip !")
-        sys.exit()
 
-    def hostLists(self):
+    def hostLists(self, hlist = None):
         """打印主机列表"""
 
         count = 46
@@ -576,7 +630,6 @@ class InfoHandle(BaseHandle):
             mode = self.mode if self.mode <= maxm else maxm
         mode = Hlen if Hlen < mode else mode
         n = mode * count + mode -2
-
         BorderLine = self.ColorSign * mode * (count + 1)
         CenterLine = self.ColorSign + self.colorMsg(flag=True) + self.ColorSign
         HeadLine = self.ColorSign + "{0}"
@@ -618,9 +671,11 @@ class InfoHandle(BaseHandle):
         while num == 0:
             try:
                 msg = """input num or [ 'q' | ctrl-c ] to quit!\nServer Id: """
-                n = input(self.colorMsg(c="green",flag=True).format(msg))
-                if n == 'q':
+                n = raw_input(self.colorMsg(c="green",flag=True).format(msg))
+                if n in ['q','Q','quit','exit']:
                     sys.exit()
+                elif type(n) == type(str):
+                    self.hostLists()
                 else:
                     try:
                         num = int(n) if hlen and int(n) <= hlen else 0
@@ -647,7 +702,7 @@ class InfoHandle(BaseHandle):
                 try:
                     num = int(v)
                 except Exception as e:
-                    self.hinfo = self.oldGetHost(v)
+                    self.hinfo = self.searchHost(v)
                     num = 0 if len(self.hinfo) > 1 else 1
         elif self.Hlen:
             num = 1 if self.Hlen == 1 else 0
@@ -658,13 +713,27 @@ class InfoHandle(BaseHandle):
         choose = {1:self.hinfo[num]}
         return choose
 
+    def dbinstall(self):
+        db_file = self.conf.get("DB_FILE")
+        conn = sqlite3.connect(db_file)
+        db = conn.cursor()
+        h = self.oldGetHost()
+        for ki in h:
+            k = h[ki]
+            sql = """insert into hosts(name,ip,user,passwd,port,sudo)
+                values('{0}','{1}','{2}','{3}',{4},{5})""".format(k["name"],k["ip"],k["user"],k["passwd"],k["port"],k["sudo"])
+            db.execute(sql)
+        conn.commit()
+        conn.close()
+        sys.exit()
+
 
 class ParaHandle(BaseHandle):
     """paramiko"""
 
     def __init__(self):
         BaseHandle.__init__(self)
-        self.hinfo = self.oldGetHost()
+        self.hinfo = self.searchHost()
         self.base_path = os.getcwd()
 
     def auth_key(self):
@@ -866,9 +935,10 @@ def main():
     if option.lists:
         info.hostLists()
         sys.exit()
-    ca = info.addList() if option.add else ""
     if option.dels:
         info.delList()
+        sys.exit()
+    ca = info.addList() if option.add else ""
 
     if option.para or option.get or option.put:
         pa.thstart(ca)

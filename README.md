@@ -20,7 +20,6 @@
 * 合并部分类
 * 使用paramiko获取ssh终端
 * 彻底去除pexpect模块
-* 同时修复终端大小变化stty size不变化的bug
 
 ## 0.3-beta
 
