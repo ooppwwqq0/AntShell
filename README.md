@@ -23,6 +23,10 @@
 * 重构全部代码结构
 * 重构部分代码逻辑
 * 主机信息存储改为sqlite3
+* 去除file数据模式
+* 添加install.py
+    * 生成sqlite3数据库文件，初始化表结构
+    * file数据迁移至sqlite3
 
 ## 0.3-beta
 
