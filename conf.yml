@@ -9,9 +9,7 @@ ODB_FILE : /Users/cass/.ssh/autosshrc
 KEY_PATH : /Users/cass/.ssh/id_rsa
 
 # not use conf
-K_FILE : ~/.ssh/known_hosts
 BACK_DIR : .sshkeybak
-XFILE : /tmp/.login.sh
 
 # default user info
 USER : wangping
