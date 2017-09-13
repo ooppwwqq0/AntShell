@@ -12,16 +12,11 @@ KEY_PATH : /Users/cass/.ssh/id_rsa
 K_FILE : ~/.ssh/known_hosts
 BACK_DIR : .sshkeybak
 XFILE : /tmp/.login.sh
-CUSTOM_CONFIG : ~/.ssh/config
 
+# default user info
 USER : wangping
 PASS : ''
 PORT : 22
-# default user info
-USERINFO :
-    USER : wangping
-    PASS : ''
-    PORT : 22
 
 # help info lang set
 LANG :
