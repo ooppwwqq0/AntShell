@@ -85,19 +85,20 @@ class ToolsBox(object):
             c : ip段数匹配，默认False
         """
 
+        if not ipaddr:
+            return False
         q = ipaddr.strip().split('.')
         l = 4 if c else len(q)
         qi = map(int, filter(lambda x: x.isdigit(), q))
         return len(q) == l and len(list(filter(lambda x: x >= 0 and x <= 255, qi))) == l
 
-    def getArgs(self, args="", flag=False):
+    def getArgs(self, args=""):
         """参数处理
             args : 原始参数
             sepa : 分隔符，默认","
         """
         sepa = option.fs if option.fs else ","
-        cmds = args.rsplit(sepa) if args else False
-        return list(map(lambda x:"\'%%%s%%\'"%x, cmds)) if flag and cmds else cmds
+        return args.rsplit(sepa) if args else False
 
 
 class ProgHandle(object):
@@ -315,13 +316,8 @@ class HostHandle(SShHandler):
         """
 
         include = include if include else option.search
-        if include:
-            match = (True if self.isIp(include, True) else match) if include else False
-        includes = self.getArgs(include, flag = True)
-
-        search = ("""and ip in ({0})""".format(",".join(includes)) if match \
-            else """and (name like {0} or ip like {0})""".format(",".join(includes))) \
-            if includes else ""
+        match = False if match else self.isIp(include, True)
+        search = self._getSearch(include, match)
         sql = """select id,name,ip,user,passwd,port,sudo
             from hosts where 1=1 {0} order by sort;"""
         self.db.execute(sql.format(search))
@@ -330,6 +326,23 @@ class HostHandle(SShHandler):
             self.db.execute(sql.format(""))
             hosts = [info for info in self.db]
         return [hosts[option.num - 1],] if option.num else hosts
+
+    def _getSearch(self, include, match, search=""):
+        includes = self.getArgs(include)
+        if includes:
+            if match:
+                search = """and ip in ({0})""".format(
+                    ",".join(list(
+                        map(lambda x:"'%s'" %x, includes)
+                    ))
+                )
+            else:
+                search = """and ({0})""".format(
+                    " or ".join(list(map(
+                        lambda x:"name like '%%{0}%%' or ip like '%%{0}%%'".format(x), includes
+                    )))
+                )
+        return search
 
     def addList(self):
         """添加主机信息"""
