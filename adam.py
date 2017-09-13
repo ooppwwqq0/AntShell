@@ -97,7 +97,7 @@ class ToolsBox(object):
         """
         sepa = option.fs if option.fs else ","
         cmds = args.rsplit(sepa) if args else False
-        return list(map(lambda x:"\'%s\'"%x, cmds)) if flag and cmds else cmds
+        return list(map(lambda x:"\'%%%s%%\'"%x, cmds)) if flag and cmds else cmds
 
 
 class ProgHandle(object):
@@ -314,18 +314,21 @@ class HostHandle(SShHandler):
             match : 开启精确匹配模式，默认False（模糊匹配）
         """
 
-        include = option.search if option.search else include
+        include = include if include else option.search
         if include:
             match = (True if self.isIp(include, True) else match) if include else False
         includes = self.getArgs(include, flag = True)
 
         search = ("""and ip in ({0})""".format(",".join(includes)) if match \
-            else """and (name in ({0}) or ip in ({0}))""".format(",".join(includes))) \
+            else """and (name like {0} or ip like {0})""".format(",".join(includes))) \
             if includes else ""
         sql = """select id,name,ip,user,passwd,port,sudo
-            from hosts where 1=1 {0} order by sort;""".format(search)
-        self.db.execute(sql)
+            from hosts where 1=1 {0} order by sort;"""
+        self.db.execute(sql.format(search))
         hosts = [info for info in self.db]
+        if not hosts and not pattern:
+            self.db.execute(sql.format(""))
+            hosts = [info for info in self.db]
         return [hosts[option.num - 1],] if option.num else hosts
 
     def addList(self):
