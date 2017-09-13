@@ -516,7 +516,7 @@ class HostHandle(SShHandler):
             if option.get:
                 remotepath = self.getPath([option.get, file_name])
                 localpath = self.getPath([self.base_path, file_name])
-                self.colorMsg("  remote path : " + remotepath + "  >>>  local path : " + localpath)
+                self.colorMsg("  remote path : " + remotepath + "  >>>  local path : " + localpath, "yellow")
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
                     p = ProgHandle(t)
                     sftp.get(remotepath, localpath, callback = p.progressBar)
@@ -524,7 +524,7 @@ class HostHandle(SShHandler):
             elif option.put:
                 localpath = self.getPath([self.base_path, option.file])
                 remotepath = self.getPath([option.put, option.file])
-                self.colorMsg("  local path : " + localpath + "  >>>  remote path : " + remotepath)
+                self.colorMsg("  local path : " + localpath + "  >>>  remote path : " + remotepath, "yellow")
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
                     p = ProgHandle(t)
                     sftp.put(localpath, remotepath, callback = p.progressBar)
