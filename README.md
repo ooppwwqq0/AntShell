@@ -17,6 +17,53 @@ a num | a name | a ip
 
 ### 参数优先级
 
+## HELP
+
+``` bash
+usage: AntShell [ -h | --version ] [-l [-m 2] ]
+            [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
+            [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
+            [ -P -c 'cmd1,cmd2,...' ]
+            [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]
+
+AntShell 远程登录管理工具
+
+positional arguments:
+  v                     fast模式位置变量
+
+sys arguments:
+  -h, --help            打印帮助信息并退出
+  --version             打印版本信息并退出
+
+edit arguments:
+  -a ip, --add ip       添加主机信息并登陆
+  -e, --edit            编辑主机信息
+  -d ip, --delete ip    删除主机信息并退出
+  --name tag            标记名
+  --user root           用户名
+  --passwd xxx          密码
+  --port 22             端口
+
+host arguments:
+  -l                    输出主机列表并退出
+  -m 2, --mode 2        列表显示列数1-5
+  -n 0                  选择连接的主机编号
+  -s 'ip|name', --search 'ip|name'
+                        模糊匹配主机信息
+  -G g1>g2              过滤群组主机
+
+manager arguments:
+  -P                    paramiko模式
+  -c 'cmd1,cmd2,...'    主机远程执行命令
+  -f file_name, --file file_name
+                        文件名
+  -g file_path, --get file_path
+                        获取文件路径
+  -p dir_path, --put dir_path
+                        指定文件路径
+  -F ',', --fs ','      指定分隔符，默认<,>
+```
+
 ## 未实现功能及特性
 
 * 数据文件新增sqlite3格式，暂时保留两种数据格式，最终去除file模式
@@ -95,71 +142,4 @@ a num | a name | a ip
 * 保留old模式登录, -o 开启
 * 保留fast-file模式登录
 * 菜单模块使用optparse
-
-### 老版本help
-
-``` bash
-Usage: a [OPTIONS]
-
-Options:
-  -v, --version         打印版本信息并退出
-  -h, --help            打印帮助信息并退出
-  -a ip, --add=ip       添加主机信息并登陆
-  -c 'cmd1,cmd2,...', --commod='cmd1,cmd2,...'
-                        主机远程执行命令
-  -e, --edit            编辑主机信息
-  -d ip, --delete=ip    删除主机信息并退出
-  -f file_name, --file=file_name
-                        文件名
-  -F ',', --fs=','      指定分隔符，默认<,>
-  -g file_path, --get=file_path
-                        获取文件路径
-  -G g1>g2, --group=g1>g2
-                        过滤群组主机
-  -l, --lists           输出主机列表并退出
-  -m 2, --mode=2        列表显示列数1-5
-  -n 0, --num=0         选择连接的主机编号
-  -p dir_path, --put=dir_path
-                        指定文件路径
-  -P, --para            paramiko模式
-  -s ip|name, --search=ip|name
-                        模糊匹配主机信息
-  -o, --old             old-sh-file模式登陆主机
-```
-
-### 新版本help
-
-``` bash
-usage: a [-h] [--version] [-a ip] [-c 'cmd1,cmd2,...'] [-e] [-d ip]
-         [-f file_name] [-F ','] [-g file_path] [-G g1>g2] [-l] [-m 2] [-n 0]
-         [-p dir_path] [-P] [-s ip|name] [-o]
-
-usage: %prog [options] poetry-file
-
-optional arguments:
-  -h, --help            打印帮助信息并退出
-  --version             打印版本信息并退出
-  -a ip, --add ip       添加主机信息并登陆
-  -c 'cmd1,cmd2,...', --commod 'cmd1,cmd2,...'
-                        主机远程执行命令
-  -e, --edit            编辑主机信息
-  -d ip, --delete ip    删除主机信息并退出
-  -f file_name, --file file_name
-                        文件名
-  -F ',', --fs ','      指定分隔符，默认<,>
-  -g file_path, --get file_path
-                        获取文件路径
-  -G g1>g2, --group g1>g2
-                        过滤群组主机
-  -l, --lists           输出主机列表并退出
-  -m 2, --mode 2        列表显示列数1-5
-  -n 0, --num 0         选择连接的主机编号
-  -p dir_path, --put dir_path
-                        指定文件路径
-  -P, --para            paramiko模式
-  -s ip|name, --search ip|name
-                        模糊匹配主机信息
-  -o, --old             old-sh-file模式登陆主机
-```
-
 

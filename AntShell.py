@@ -696,10 +696,11 @@ class Parser(BaseHandler):
         BaseHandler.__init__(self)
         self.langset = self.conf["LANG"]["SET"]
         self.lang = self.conf["LANG"][self.langset]
-        self.usage = """%(prog)s [-h] [--version] [-l [-m 2] ]
-            [v|-n 0|-s 'ip|name' [-e] ] [-G g1>g2]
-            [-P [-c 'cmd1,cmd2,...'] ] [-a ip| -d ip]
-            [-f file_name [-g file_path|-p dir_path [-F ','] ] ]"""
+        self.usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
+            [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
+            [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
+            [ -P -c 'cmd1,cmd2,...' ]
+            [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]"""
         self.version = "%(prog)s " + self.conf["VERSION"]
 
     def Argparser(self):
