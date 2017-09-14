@@ -134,7 +134,7 @@ class BaseHandler(ToolsBox):
         cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
         conf_path = ["~/.antshell.yml", "/etc/antshell/antshell.yml", os.path.join(cwd, "antshell.yml")]
 
-        path0 = os.getenv("ANTCONFIG_PATH", None)
+        path0 = os.getenv("ANTSHELL_CONFIG", None)
         if path0 is not None:
             conf_path.insert(0, path0)
 

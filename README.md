@@ -45,7 +45,7 @@ a num | a name | a ip
     * 生成sqlite3数据库文件，初始化表结构
     * file数据迁移至sqlite3
 * 增加配置文件默认读取位置
-    * env ANTCONFIG_PATH
+    * env ANTSHELL_CONFIG
     * ~/.antshell.yml
     * /etc/antshell/antshell.yml
     * $CWD/antshell.yml
