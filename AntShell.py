@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 
 #######################################################################
-#                            ADAM AUTOSSH                             #
+#                          AntShell AUTOSSH                           #
 #######################################################################
 
 from __future__ import print_function
@@ -120,7 +120,7 @@ class BaseHandler(ToolsBox):
 
     def __init__(self):
         """初始化"""
-        self.CONF = "/data/profile/adam-git/conf.yml"
+        self.CONF = "/data/profile/AntShell.git/conf.yml"
         self.conf = self._conf(o=True)
         self.db = self._db()
         self.HOME = self.conf["HOME"]
@@ -325,7 +325,10 @@ class HostHandle(SShHandler):
         if not hosts and not pattern:
             self.db.execute(sql.format(""))
             hosts = [info for info in self.db]
-        return [hosts[option.num - 1],] if option.num else hosts
+        hosts = [hosts[option.num - 1],] if option.num else hosts
+        self.Hlen = len(hosts)
+        option.num = 1 if self.Hlen == 1 else 0
+        return hosts
 
     def _getSearch(self, include, match, search=""):
         includes = self.getArgs(include)
@@ -413,7 +416,7 @@ class HostHandle(SShHandler):
 
         clear = os.system('clear')
         print(BorderLine)
-        print(CenterLine.format("[ADAM AUTO SSH]".center(n)))
+        print(CenterLine.format("[AntShell AUTOSSH]".center(n)))
         print(CenterLine.format(" ".center(n)))
         print(CenterLine.format(" ".center(n)))
 
@@ -440,52 +443,41 @@ class HostHandle(SShHandler):
 
         print(CenterLine.format(" ".center(n)))
         print(CenterLine.format(" ".center(n)))
-        print(CenterLine.format("[ADAM AUTO SSH]".center(n)))
+        print(CenterLine.format("[AntShell AUTOSSH]".center(n)))
         print(BorderLine)
 
     def _chooHost(self, num = 0):
         """用户交互形式选定主机"""
 
-        v = option.v
-        n = option.num
-        if v:
-            if v == "!":
+        if option.v:
+            if option.v == "!":
                 sys.exit()
-            elif v == '^':
-                num = 1
+            elif option.v == '^':
+                option.num = 1
             else:
                 try:
-                    num = int(v)
-                    self.hinfo = self.searchHost()
+                    option.num = int(option.v)
                 except Exception as e:
-                    self.hinfo = self.searchHost(v)
-                    num = 0 if len(self.hinfo) > 1 else 1
-                finally:
-                    self.Hlen = len(self.hinfo)
-        elif self.Hlen:
-            num = 1 if self.Hlen == 1 else 0
-        if n:
-            num = n if n <= self.Hlen else 0
-        if num == 0:
+                    option.search = option.v
+        self.hinfo = self.searchHost()
+        if option.num == 0:
             self.hostLists()
-            while num == 0:
+            while option.num == 0:
                 try:
                     msg = """input num or [ 'q' | ctrl-c ] to quit!\nServer Id: """
                     n = raw_input(self.colorMsg(c="green",flag=True).format(msg))
                     if n in ['q','Q','quit','exit']:
                         sys.exit()
-                    elif type(n) == type(str):
-                        self.hostLists()
                     else:
                         try:
-                            num = int(n) if self.Hlen and int(n) <=self.Hlen else 0
+                            option.num = int(n) if int(n) <=self.Hlen else 0
                         except Exception as e:
                             pass
                 except EOFError as e:
                     print("\r")
                 except KeyboardInterrupt as e:
                     sys.exit("\r")
-        self.hinfo = [self.hinfo[num-1],]
+        self.hinfo = self.searchHost()
 
     def getConn(self):
         """处理生成登陆信息"""
@@ -728,7 +720,7 @@ class Parser(BaseHandler):
         g3.add_argument("-l", "--lists", dest="lists", action="store_true", default=False,
                             help="%s" %self.lang["lists"])
         g3.add_argument("-m", "--mode", dest="mode", action="store", type=int,
-                            help="%s" %self.lang["mode"],default=0, metavar="2")
+                            help="%s" %self.lang["mode"], default=0, metavar="2")
         g3.add_argument("-n", "--num", dest="num", action="store", type=int,
                             help="%s" %self.lang["num"], metavar=0)
         g3.add_argument("-s", "--search", dest="search", action="store", type=str,

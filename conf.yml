@@ -1,10 +1,10 @@
 
 # soft info
-PROG : adam
-VERSION : 1.0-beta
+PROG : AntShell
+VERSION : 0.4-beta
 
 # ssh config
-DB_FILE : /Users/cass/.ssh/adam.db
+DB_FILE : /Users/cass/.ssh/ant.db
 ODB_FILE : /Users/cass/.ssh/autosshrc
 KEY_PATH : /Users/cass/.ssh/id_rsa
 
@@ -38,7 +38,7 @@ LANG :
         search : 模糊匹配主机信息
         old : old-sh-file模式登陆主机
         v : fast模式位置变量
-        desc : ADAM 远程登录管理工具
+        desc : AntShell 远程登录管理工具
         user : 用户名
         passwd : 密码
         port : 端口
@@ -61,7 +61,7 @@ LANG :
         search : fuzzy matching host info
         old : old-sh-file pattern login host
         v : fast mode position variable
-        desc : ADAM Nexus Terminal
+        desc : AntShell Nexus Terminal
         user : username
         passwd : password
         port : ports
