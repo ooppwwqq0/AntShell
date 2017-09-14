@@ -1,4 +1,4 @@
-# AndShell 说明
+# AntShell 说明
 
 > 2017年9月14日正式更名AntShell（原名Adam）
 
