@@ -94,7 +94,7 @@ manager arguments:
     * file数据迁移至sqlite3
 * 增加配置文件默认读取位置
     * env ANTSHELL_CONFIG
-    * ~/.antshell.yml
+    * ~/.antshell/antshell.yml
     * /etc/antshell/antshell.yml
     * $CWD/antshell.yml
 

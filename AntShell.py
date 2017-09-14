@@ -132,7 +132,9 @@ class BaseHandler(ToolsBox):
     def _conf(self):
         """获取配置文件"""
         cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
-        conf_path = ["~/.antshell.yml", "/etc/antshell/antshell.yml", os.path.join(cwd, "antshell.yml")]
+        conf_name = "antshell.yml"
+        conf_path = ["~/.antshell/", "/etc/antshell/", cwd]
+        conf_path = list(map(lambda x:os.path.join(x, conf_name), conf_path))
 
         path0 = os.getenv("ANTSHELL_CONFIG", None)
         if path0 is not None:
@@ -159,7 +161,6 @@ class BaseHandler(ToolsBox):
             except Exception as e:
                 print(e)
                 sys.exit()
-
 
     def _commit(self):
         self.conn.commit()
