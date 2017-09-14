@@ -733,21 +733,21 @@ class Parser(BaseHandler):
                             help="%s" %self.lang["port"], metavar="22")
 
         g3 = parser.add_argument_group("host arguments")
-        g3.add_argument("-l", "--lists", dest="lists", action="store_true", default=False,
+        g3.add_argument("-l", dest="lists", action="store_true", default=False,
                             help="%s" %self.lang["lists"])
         g3.add_argument("-m", "--mode", dest="mode", action="store", type=int,
                             help="%s" %self.lang["mode"], default=0, metavar="2")
-        g3.add_argument("-n", "--num", dest="num", action="store", type=int,
+        g3.add_argument("-n", dest="num", action="store", type=int,
                             help="%s" %self.lang["num"], metavar=0)
         g3.add_argument("-s", "--search", dest="search", action="store", type=str,
                             help="%s" %self.lang["search"], metavar="'ip|name'")
-        g3.add_argument("-G", "--group", dest="group", action="store", type=str,
+        g3.add_argument("-G", dest="group", action="store", type=str,
                             help="%s" %self.lang["group"], metavar="g1>g2")
 
         g4 = parser.add_argument_group("manager arguments")
-        g4.add_argument("-P", "--para", dest="para", action="store_true", default=False,
+        g4.add_argument("-P", dest="para", action="store_true", default=False,
                             help="%s" %self.lang["para"])
-        g4.add_argument("-c", "--commod", dest="commod", action="store", type=str,
+        g4.add_argument("-c", dest="commod", action="store", type=str,
                             help="%s" %self.lang["commod"], metavar="'cmd1,cmd2,...'")
         g4.add_argument("-f", "--file", dest="file", action="store", type=str,
                             help="%s" %self.lang["file"], metavar="file_name")

@@ -41,6 +41,7 @@ a num | a name | a ip
 * 主机信息存储改为sqlite3
 * 去除file数据模式
 * 新增name自定义参数
+* 调整命令行参数
 * 添加install.py
     * 生成sqlite3数据库文件，初始化表结构
     * file数据迁移至sqlite3
