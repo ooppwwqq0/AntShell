@@ -120,33 +120,46 @@ class BaseHandler(ToolsBox):
 
     def __init__(self):
         """初始化"""
-        self.CONF = "/data/profile/AntShell.git/conf.yml"
-        self.conf = self._conf(o=True)
+        self.conf = self._conf()
         self.db = self._db()
-        self.HOME = self.conf["HOME"]
-        self.PWD = self.conf["PWD"]
-        self.sshfile = self.getPath([self.conf["ODB_FILE"]])
+        self.HOME = os.environ["HOME"]
         self.rows, self.columns = os.popen("stty size","r").read().split()
         self.ColorSign = self.colorMsg(flag=True).format("#")
         self.base_path = os.getcwd()
         self.hinfo = []
         self.Hlen = 0
 
-    def _conf(self, k=None, o=False):
+    def _conf(self):
         """获取配置文件"""
-        conf = yaml.load(open(self.CONF))
-        conf["HOME"] = os.environ['HOME']
-        conf["PWD"] = os.path.dirname(__file__)
-        if o:
-            return conf
-        return conf[k] if k else self._par(conf)
+        cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
+        conf_path = ["~/.antshell.yml", "/etc/antshell/antshell.yml", os.path.join(cwd, "antshell.yml")]
+
+        path0 = os.getenv("ANTCONFIG_PATH", None)
+        if path0 is not None:
+            conf_path.insert(0, path0)
+
+        for path in conf_path:
+            path = os.path.expanduser(path)
+            if os.path.exists(path) and os.path.isfile(path):
+                try:
+                    conf = yaml.load(open(path))
+                    return conf
+                except Exception as e:
+                    print(e)
+                    sys.exit()
 
     def _db(self):
-        db_file = self.conf.get("DB_FILE")
-        self.conn = sqlite3.connect(db_file)
-        self.conn.row_factory = self._dict_factory
-        db = self.conn.cursor()
-        return db
+        db_file = os.path.expanduser(self.conf.get("DB_FILE"))
+        if db_file and os.path.isfile(db_file):
+            try:
+                self.conn = sqlite3.connect(db_file)
+                self.conn.row_factory = self._dict_factory
+                db = self.conn.cursor()
+                return db
+            except Exception as e:
+                print(e)
+                sys.exit()
+
 
     def _commit(self):
         self.conn.commit()
@@ -177,7 +190,7 @@ class SShHandler(BaseHandler):
 
     def auth_key(self):
         """获取本地private_key"""
-        key_path = self.conf.get("KEY_PATH")
+        key_path = os.path.expanduser(self.conf.get("KEY_PATH"))
         if key_path and os.path.isfile(key_path):
             try:
                 key = paramiko.RSAKey.from_private_key_file(key_path)
@@ -316,7 +329,7 @@ class HostHandle(SShHandler):
         """
 
         include = include if include else option.search
-        match = False if match else self.isIp(include, True)
+        match = True if self.isIp(include, True) else match
         search = self._getSearch(include, match)
         sql = """select id,name,ip,user,passwd,port,sudo
             from hosts where 1=1 {0} order by sort;"""
@@ -327,7 +340,6 @@ class HostHandle(SShHandler):
             hosts = [info for info in self.db]
         hosts = [hosts[option.num - 1],] if option.num else hosts
         self.Hlen = len(hosts)
-        option.num = 1 if self.Hlen == 1 else 0
         return hosts
 
     def _getSearch(self, include, match, search=""):
@@ -357,12 +369,13 @@ class HostHandle(SShHandler):
             if len(res) == 1:
                 self.colorMsg("already exist !")
             elif len(res) == 0:
+                name = option.name if option.name else ip
                 user = option.user if option.user else self.conf.get("USER")
                 passwd = option.passwd if option.passwd else self.conf.get("PASS")
                 port = option.port if option.port else self.conf.get("PORT")
-                sudo = 0 if passwd else 1
+                sudo = 0 if user == "root" else 1
                 sql = """insert into hosts(name,ip,user,passwd,port,sudo)
-                    values('{0}','{0}','{1}','{2}',{3},{4})""".format(ip, user, passwd, port, sudo)
+                    values('{0}','{1}','{2}','{3}',{4},{5})""".format(name, ip, user, passwd, port, sudo)
                 self.db.execute(sql)
                 self._commit()
             else:
@@ -460,9 +473,10 @@ class HostHandle(SShHandler):
                 except Exception as e:
                     option.search = option.v
         self.hinfo = self.searchHost()
-        if option.num == 0:
+        option.num = 1 if self.Hlen == 1 and not option.num else option.num
+        if not option.num:
             self.hostLists()
-            while option.num == 0:
+            while not option.num:
                 try:
                     msg = """input num or [ 'q' | ctrl-c ] to quit!\nServer Id: """
                     n = raw_input(self.colorMsg(c="green",flag=True).format(msg))
@@ -709,6 +723,8 @@ class Parser(BaseHandler):
                             help="%s" %self.lang["edit"])
         g2.add_argument("-d", "--delete", dest="dels", action="store", type=str,
                             help="%s" %self.lang["delete"], metavar="ip")
+        g2.add_argument("--name", dest="name", action="store", type=str,
+                            help="%s" %self.lang["name"], metavar="tag")
         g2.add_argument("--user", dest="user", action="store", type=str,
                             help="%s" %self.lang["user"], metavar="root")
         g2.add_argument("--passwd", dest="passwd", action="store", type=str,

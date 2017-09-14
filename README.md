@@ -30,6 +30,7 @@ a num | a name | a ip
 * 未来版本讲抛弃pexpect，使用paramiko获取终端（已完成）
 * 添加ansible模块替代部分功能，待定
 * 重构代码结构
+* 添加自动加载默认配置文件位置
 
 ## 0.4-beta
 * 修复stty无法随终端大小变化的bug
@@ -39,9 +40,15 @@ a num | a name | a ip
 * 彻底去除pexpect模块
 * 主机信息存储改为sqlite3
 * 去除file数据模式
+* 新增name自定义参数
 * 添加install.py
     * 生成sqlite3数据库文件，初始化表结构
     * file数据迁移至sqlite3
+* 增加配置文件默认读取位置
+    * env ANTCONFIG_PATH
+    * ~/.antshell.yml
+    * /etc/antshell/antshell.yml
+    * $CWD/antshell.yml
 
 ## 0.3-beta
 
