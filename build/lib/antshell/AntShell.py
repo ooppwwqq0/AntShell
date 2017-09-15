@@ -589,6 +589,7 @@ class HostHandle(SShHandler):
         """处理多线程任务"""
 
         pc = self.hinfo if self.hinfo else self.searchHost()
+        pc = [pc[option.num - 1],] if option.num else pc
         self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
         threads = []
         for ki in pc:
