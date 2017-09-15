@@ -97,6 +97,10 @@ manager arguments:
     * ~/.antshell/antshell.yml
     * /etc/antshell/antshell.yml
     * $CWD/antshell.yml
+* 修改新增主机，删除主机逻辑代码
+* 修改为pypi安装包
+* 修改目录结构
+* 新增bin下系统命令
 
 ## 0.3-beta
 
