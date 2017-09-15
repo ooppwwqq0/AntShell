@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
 #######################################################################
@@ -6,15 +6,16 @@
 #######################################################################
 
 from __future__ import print_function
-import os, sys
-import yaml, re
+import os, sys, re
+import datetime, time
+import yaml
 import argparse
 import paramiko
 import ansible
 import sqlite3
 import pyte
 import errno
-import datetime, time, threading
+import threading
 import struct, fcntl, signal, socket, select
 from tqdm import tqdm
 try:
