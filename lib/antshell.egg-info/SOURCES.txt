@@ -2,7 +2,6 @@ MANIFEST.in
 README.md
 VERSION
 requirements.txt
-setup.cfg
 setup.py
 bin/a
 bin/antshell

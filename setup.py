@@ -22,9 +22,13 @@ setup(
     author=__author__,
     author_email='emo_ooppwwqq0@163.com',
     url='http://c.isme.pub/AntShell',
+    license='GPLv3',
     install_requires=install_r,
     package_dir={ '': 'lib' },
     packages=find_packages('lib'),
+    package_data={
+        '': []
+    },
     classifiers=[],
     scripts=[
         'bin/antshell',
