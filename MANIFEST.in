@@ -1,0 +1,4 @@
+include antshell/sql/*.sql
+include antshell/*.yml
+recursive-include examples *
+recursive-include Doc *
