@@ -13,6 +13,8 @@
 ##########################################################################
 
 from __future__ import print_function
+from release import __prog__, __version__
+from lang import LANG
 import os, sys, re
 import datetime, time
 import yaml
@@ -710,18 +712,18 @@ class Parser(BaseHandler):
 
     def __init__(self):
         BaseHandler.__init__(self)
-        self.langset = self.conf["LANG"]["SET"]
-        self.lang = self.conf["LANG"][self.langset]
+        self.langset = self.conf.get("langset") if self.conf.get("langset") else LANG.get("default")
+        self.lang = LANG[self.langset]
         self.usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
             [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
             [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
             [ -P -c 'cmd1,cmd2,...' ]
             [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]"""
-        self.version = "%(prog)s " + self.conf["VERSION"]
+        self.version = "%(prog)s " + __version__
 
     def Argparser(self):
         parser = argparse.ArgumentParser(
-            prog = self.conf["PROG"],
+            prog = __prog__,
             usage = self.usage,
             description = self.lang["desc"],
             add_help = False)
