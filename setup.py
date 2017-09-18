@@ -27,7 +27,9 @@ setup(
     package_dir={ '': 'lib' },
     packages=find_packages('lib'),
     package_data={
-        '': []
+        '': [
+            'sql/*.sql',
+        ]
     },
     classifiers=[],
     scripts=[

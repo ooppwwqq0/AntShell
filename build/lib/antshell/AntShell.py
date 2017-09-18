@@ -12,13 +12,13 @@
 #                                                                        #
 ##########################################################################
 
-from __future__ import print_function
-from release import __prog__, __version__
-from lang import LANG
+from __future__ import (absolute_import, division, print_function)
+from antshell.base import ToolsBox, TqdmBar
+from antshell.base import load_config, load_argParser
+from antshell.install import init_db, convert_to_db
 import os, sys, re
 import datetime, time
 import yaml
-import argparse
 import paramiko
 import ansible
 import sqlite3
@@ -39,96 +39,11 @@ if sys.version < '3':
     sys.setdefaultencoding('utf-8')
 
 
-class ToolsBox(object):
-
-    """公用工具定义基类"""
-
-    def _par(self, k):
-        """动态生成类+属性"""
-        class o : pass
-        for key in k:
-            if str(type(k[key])) == "<type 'dict'>":
-                setattr(o, key, self._par(k[key]))
-            else:
-                setattr(o, key, k[key])
-        return o
-
-    def _dict_factory(self, cursor, row):
-        """数据结果转字典"""
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
-        return d
-
-    def getPath(self, args, L=False):
-        """生成绝对路径"""
-
-        HOME = os.environ['HOME']
-        path = "" if L else HOME
-        for val in args:
-            path = os.path.join(path, val)
-        return path
-
-    def colorMsg(self, m="", c="red", flag=False):
-        """颜色文本输出"""
-        colorSign = {
-            "xx" : "\033[32m{0}\033[0m",
-            "red" : "\033[1;31m{0}\033[0m",
-            "green" : "\033[1;32m{0}\033[0m",
-            "yellow" : "\033[1;33m{0}\033[0m",
-            "blue" : "\033[1;34m{0}\033[0m",
-            "pink" : "\033[1;35m{0}\033[0m",
-            "blue" : "\033[1;36m{0}\033[0m",
-        }
-        msg = colorSign.get(c).format(m)
-        if flag:
-            return colorSign.get(c)
-        else:
-            print(msg)
-            return msg
-
-    def isIp(self, ipaddr, c = False):
-        """ip匹配
-            ipaddr : 需要匹配的ip
-            c : ip段数匹配，默认False
-        """
-
-        if not ipaddr:
-            return False
-        q = ipaddr.strip().split('.')
-        l = 4 if c else len(q)
-        qi = map(int, filter(lambda x: x.isdigit(), q))
-        return len(q) == l and len(list(filter(lambda x: x >= 0 and x <= 255, qi))) == l
-
-    def getArgs(self, args=""):
-        """参数处理
-            args : 原始参数
-            sepa : 分隔符，默认","
-        """
-        sepa = option.fs if option.fs else ","
-        return args.rsplit(sepa) if args else False
-
-
-class ProgHandle(object):
-    """文件传输进度条tqdm"""
-
-    def __init__(self, t):
-        self.t = t
-        self.last_b = 0
-
-    def progressBar(self, transferred, toBeTransferred, suffix=''):
-        """tqdm进度条"""
-        self.t.total = toBeTransferred
-        self.t.update(transferred - self.last_b)
-        self.last_b = transferred
-
-
-class BaseHandler(ToolsBox):
+class Base(ToolsBox):
     """处理配置文件以及数据库操作基类"""
 
     def __init__(self):
         """初始化"""
-        self.conf = self._conf()
         self.db = self._db()
         self.HOME = os.environ["HOME"]
         self.rows, self.columns = os.popen("stty size","r").read().split()
@@ -137,38 +52,17 @@ class BaseHandler(ToolsBox):
         self.hinfo = []
         self.Hlen = 0
 
-    def _conf(self):
-        """获取配置文件"""
-        cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
-        conf_name = "antshell.yml"
-        conf_path = ["~/.antshell/", "/etc/antshell/", cwd]
-        conf_path = list(map(lambda x:os.path.join(x, conf_name), conf_path))
-
-        path0 = os.getenv("ANTSHELL_CONFIG", None)
-        if path0 is not None:
-            conf_path.insert(0, path0)
-
-        for path in conf_path:
-            path = os.path.expanduser(path)
-            if os.path.exists(path) and os.path.isfile(path):
-                try:
-                    conf = yaml.load(open(path))
-                    return conf
-                except Exception as e:
-                    print(e)
-                    sys.exit()
-
     def _db(self):
-        db_file = os.path.expanduser(self.conf.get("DB_FILE"))
-        if db_file and os.path.isfile(db_file):
-            try:
+        db_file = os.path.expanduser(conf.get("DB_FILE"))
+        try:
+            if db_file and os.path.isfile(db_file):
                 self.conn = sqlite3.connect(db_file)
                 self.conn.row_factory = self._dict_factory
                 db = self.conn.cursor()
                 return db
-            except Exception as e:
-                print(e)
-                sys.exit()
+        except Exception as e:
+            print(e)
+        sys.exit()
 
     def _commit(self):
         self.conn.commit()
@@ -177,11 +71,11 @@ class BaseHandler(ToolsBox):
         self.conn.close()
 
 
-class SShHandler(BaseHandler):
+class SShHandler(Base):
     """ssh虚拟终端类"""
 
     def __init__(self):
-        BaseHandler.__init__(self)
+        Base.__init__(self)
         self.ssh = None
         self.channel = None
         self.vim_flag = False
@@ -201,7 +95,7 @@ class SShHandler(BaseHandler):
 
     def auth_key(self):
         """获取本地private_key"""
-        key_path = os.path.expanduser(self.conf.get("KEY_PATH"))
+        key_path = os.path.expanduser(conf.get("KEY_PATH"))
         if key_path and os.path.isfile(key_path):
             try:
                 key = paramiko.RSAKey.from_private_key_file(key_path)
@@ -353,7 +247,7 @@ class HostHandle(SShHandler):
         return hosts
 
     def _getSearch(self, include, match, search=""):
-        includes = self.getArgs(include)
+        includes = self.getArgs(include, option.fs)
         if includes:
             if match:
                 search = """and ip in ({0})""".format(
@@ -374,9 +268,9 @@ class HostHandle(SShHandler):
         self.info = {
             "name" : option.name if option.name else ip,
             "ip" : ip,
-            "user" : option.user if option.user else self.conf.get("USER"),
-            "passwd" : option.passwd if option.passwd else self.conf.get("PASS"),
-            "port" : option.port if option.port else self.conf.get("PORT"),
+            "user" : option.user if option.user else conf.get("USER"),
+            "passwd" : option.passwd if option.passwd else conf.get("PASS"),
+            "port" : option.port if option.port else conf.get("PORT"),
         }
         self.info["sudo"] = 0 if self.info["user"] == "root" else 1
 
@@ -519,7 +413,7 @@ class HostHandle(SShHandler):
         """远程执行命令"""
 
         self.colorMsg("%s start" % self.k["ip"],"blue")
-        cmds = self.getArgs(option.commod)
+        cmds = self.getArgs(option.commod, option.fs)
         for cmd in cmds:
             self.colorMsg("  exec commod : " + cmd, "yellow")
             if self.k["sudo"] == '1' and self.k["user"] != "root":
@@ -553,7 +447,7 @@ class HostHandle(SShHandler):
                 localpath = self.getPath([self.base_path, file_name])
                 self.colorMsg("  remote path : " + remotepath + "  >>>  local path : " + localpath, "yellow")
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
-                    p = ProgHandle(t)
+                    p = TqdmBar(t)
                     sftp.get(remotepath, localpath, callback = p.progressBar)
                 print("\t下载文件成功")
             elif option.put:
@@ -561,7 +455,7 @@ class HostHandle(SShHandler):
                 remotepath = self.getPath([option.put, option.file])
                 self.colorMsg("  local path : " + localpath + "  >>>  remote path : " + remotepath, "yellow")
                 with tqdm(unit_scale=True, miniters=1 ,desc=" "*8 + file_name) as t:
-                    p = ProgHandle(t)
+                    p = TqdmBar(t)
                     sftp.put(localpath, remotepath, callback = p.progressBar)
                 print('\t上传文件成功')
         except Exception as e:
@@ -707,85 +601,23 @@ class HostHandle(SShHandler):
         tran.close()
 
 
-class Parser(BaseHandler):
-    """参数设置"""
-
-    def __init__(self):
-        BaseHandler.__init__(self)
-        self.langset = self.conf.get("langset") if self.conf.get("langset") else LANG.get("default")
-        self.lang = LANG[self.langset]
-        self.usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
-            [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
-            [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
-            [ -P -c 'cmd1,cmd2,...' ]
-            [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]"""
-        self.version = "%(prog)s " + __version__
-
-    def Argparser(self):
-        parser = argparse.ArgumentParser(
-            prog = __prog__,
-            usage = self.usage,
-            description = self.lang["desc"],
-            add_help = False)
-
-        parser.add_argument("v", nargs="?", help="%s" %self.lang["v"])
-        g1 = parser.add_argument_group("sys arguments")
-        g1.add_argument("-h", "--help", action="help",
-                            help="%s" %self.lang["help"])
-        g1.add_argument("--version", action = "version", version=self.version,
-                            help="%s" %self.lang["version"])
-
-        g2 = parser.add_argument_group("edit arguments")
-        g2.add_argument("-a", "--add", dest="add", action="store", type=str,
-                            help="%s" %self.lang["add"], metavar="ip")
-        g2.add_argument("-e", "--edit", dest="edit", action="store_true", default=False,
-                            help="%s" %self.lang["edit"])
-        g2.add_argument("-d", "--delete", dest="dels", action="store", type=str,
-                            help="%s" %self.lang["delete"], metavar="ip")
-        g2.add_argument("--name", dest="name", action="store", type=str,
-                            help="%s" %self.lang["name"], metavar="tag")
-        g2.add_argument("--user", dest="user", action="store", type=str,
-                            help="%s" %self.lang["user"], metavar="root")
-        g2.add_argument("--passwd", dest="passwd", action="store", type=str,
-                            help="%s" %self.lang["passwd"], metavar="xxx")
-        g2.add_argument("--port", dest="port", action="store", type=int,
-                            help="%s" %self.lang["port"], metavar="22")
-
-        g3 = parser.add_argument_group("host arguments")
-        g3.add_argument("-l", dest="lists", action="store_true", default=False,
-                            help="%s" %self.lang["lists"])
-        g3.add_argument("-m", "--mode", dest="mode", action="store", type=int,
-                            help="%s" %self.lang["mode"], default=0, metavar="2")
-        g3.add_argument("-n", dest="num", action="store", type=int,
-                            help="%s" %self.lang["num"], metavar=0)
-        g3.add_argument("-s", "--search", dest="search", action="store", type=str,
-                            help="%s" %self.lang["search"], metavar="'ip|name'")
-        g3.add_argument("-G", dest="group", action="store", type=str,
-                            help="%s" %self.lang["group"], metavar="g1>g2")
-
-        g4 = parser.add_argument_group("manager arguments")
-        g4.add_argument("-P", dest="para", action="store_true", default=False,
-                            help="%s" %self.lang["para"])
-        g4.add_argument("-c", dest="commod", action="store", type=str,
-                            help="%s" %self.lang["commod"], metavar="'cmd1,cmd2,...'")
-        g4.add_argument("-f", "--file", dest="file", action="store", type=str,
-                            help="%s" %self.lang["file"], metavar="file_name")
-        g4.add_argument("-g", "--get", dest="get", action="store", type=str,
-                            help="%s" %self.lang["get"], metavar="file_path")
-        g4.add_argument("-p", "--put", dest="put", action="store", type=str,
-                            help="%s" %self.lang["put"], metavar="dir_path")
-        g4.add_argument("-F", "--fs", dest="fs", action="store", type=str,
-                            help="%s" %self.lang["fs"], default=",", metavar="','")
-        return parser
-
-
 def main():
     """主函数"""
-    parser = Parser().Argparser()
     global option
+    global conf
+    conf = load_config()
+    parser = load_argParser()
     option = parser.parse_args()
-    h = HostHandle()
+
     try:
+        if option.init:
+            init_db(conf)
+            sys.exit()
+        elif option.update:
+            init_db(conf)
+            convert_to_db(conf)
+            sys.exit()
+        h = HostHandle()
         if option.lists:
             h.hostLists()
             sys.exit()
@@ -797,12 +629,12 @@ def main():
             h.thstart()
         #clear = os.system('clear')
         h.connect()
+        h._dbclose()
     except Exception as e:
         print(e)
         print(parser.print_help())
     finally:
         print("close connect")
-        h._dbclose()
         sys.exit()
 
 

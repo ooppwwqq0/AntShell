@@ -1,7 +1,8 @@
-#!python
+#!/usr/local/product/brew-1.1.5/Cellar/python/2.7.13/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function)
+import sys
 __metaclass__ = type
 
 __requires__ = ['antshell']
@@ -10,7 +11,11 @@ try:
 except Exception:
     pass
 
-from antshell import main
+try:
+    from antshell import main
+except ImportError as e:
+    print("load error")
+    sys.exit()
 
 if __name__ == "__main__":
     main()

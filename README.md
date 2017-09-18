@@ -21,11 +21,12 @@
 > 2017年9月14日正式更名AntShell（原名Adam）
 
 ## 功能参数解析
+
 ### 功能模式
 
 ### 常用参数组合
 
-``` bash
+```
 # 筛选主机
 a -s name | a -s ip
 a -n num
@@ -34,53 +35,6 @@ a num | a name | a ip
 ```
 
 ### 参数优先级
-
-## HELP
-
-``` bash
-usage: AntShell [ -h | --version ] [-l [-m 2] ]
-            [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
-            [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
-            [ -P -c 'cmd1,cmd2,...' ]
-            [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]
-
-AntShell 远程登录管理工具
-
-positional arguments:
-  v                     fast模式位置变量
-
-sys arguments:
-  -h, --help            打印帮助信息并退出
-  --version             打印版本信息并退出
-
-edit arguments:
-  -a ip, --add ip       添加主机信息并登陆
-  -e, --edit            编辑主机信息
-  -d ip, --delete ip    删除主机信息并退出
-  --name tag            标记名
-  --user root           用户名
-  --passwd xxx          密码
-  --port 22             端口
-
-host arguments:
-  -l                    输出主机列表并退出
-  -m 2, --mode 2        列表显示列数1-5
-  -n 0                  选择连接的主机编号
-  -s 'ip|name', --search 'ip|name'
-                        模糊匹配主机信息
-  -G g1>g2              过滤群组主机
-
-manager arguments:
-  -P                    paramiko模式
-  -c 'cmd1,cmd2,...'    主机远程执行命令
-  -f file_name, --file file_name
-                        文件名
-  -g file_path, --get file_path
-                        获取文件路径
-  -p dir_path, --put dir_path
-                        指定文件路径
-  -F ',', --fs ','      指定分隔符，默认<,>
-```
 
 ## 未实现功能及特性
 
@@ -122,6 +76,7 @@ manager arguments:
 * 修改目录结构
 * 新增bin下系统命令
 * 配置文件拆分成系统配置和用户自定义配置
+* 拆分部分脚本功能，优化部分结构
 
 ## 0.3-beta
 
@@ -168,3 +123,49 @@ manager arguments:
 * 保留fast-file模式登录
 * 菜单模块使用optparse
 
+## HELP
+
+```
+usage: AntShell [ -h | --version ] [-l [-m 2] ]
+            [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
+            [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
+            [ -P -c 'cmd1,cmd2,...' ]
+            [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]
+
+AntShell 远程登录管理工具
+
+positional arguments:
+  v                     fast模式位置变量
+
+sys arguments:
+  -h, --help            打印帮助信息并退出
+  --version             打印版本信息并退出
+
+edit arguments:
+  -a ip, --add ip       添加主机信息并登陆
+  -e, --edit            编辑主机信息
+  -d ip, --delete ip    删除主机信息并退出
+  --name tag            标记名
+  --user root           用户名
+  --passwd xxx          密码
+  --port 22             端口
+
+host arguments:
+  -l                    输出主机列表并退出
+  -m 2, --mode 2        列表显示列数1-5
+  -n 0                  选择连接的主机编号
+  -s 'ip|name', --search 'ip|name'
+                        模糊匹配主机信息
+  -G g1>g2              过滤群组主机
+
+manager arguments:
+  -P                    paramiko模式
+  -c 'cmd1,cmd2,...'    主机远程执行命令
+  -f file_name, --file file_name
+                        文件名
+  -g file_path, --get file_path
+                        获取文件路径
+  -p dir_path, --put dir_path
+                        指定文件路径
+  -F ',', --fs ','      指定分隔符，默认<,>
+```

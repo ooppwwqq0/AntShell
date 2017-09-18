@@ -1,11 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+##########################################################################
+# _______  __    _  _______  _______  __   __  _______  ___      ___     #
+#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+#                                                                        #
+##########################################################################
+
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 # zh or en
 # help info lang set
 LANG = {
     "default" :"en",
     "zh" : {
+        "init" : "初始化配置文件以及数据库",
+        "update" : "hosts信息升级成数据库",
         "version" : "打印版本信息并退出",
         "help" : "打印帮助信息并退出",
         "add" : "添加主机信息并登陆",
@@ -31,6 +46,8 @@ LANG = {
         "port" : "端口",
     },
     "en" : {
+        "init" : "Initialize the configuration file and the database",
+        "update" : "The hosts information is upgraded to a database",
         "version" : "show program's version number and exit",
         "help" : "show this help message and exit",
         "add" : "add host info and login",

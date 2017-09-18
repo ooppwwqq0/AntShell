@@ -9,7 +9,10 @@ lib/antshell/AntShell.py
 lib/antshell/AntShell.pyc
 lib/antshell/__init__.py
 lib/antshell/__init__.pyc
+lib/antshell/base.py
+lib/antshell/base.pyc
 lib/antshell/install.py
+lib/antshell/install.pyc
 lib/antshell/lang.py
 lib/antshell/lang.pyc
 lib/antshell/release.py
@@ -19,4 +22,5 @@ lib/antshell.egg-info/SOURCES.txt
 lib/antshell.egg-info/dependency_links.txt
 lib/antshell.egg-info/requires.txt
 lib/antshell.egg-info/top_level.txt
+lib/antshell/sql/init.sql
 sql/init.sql
