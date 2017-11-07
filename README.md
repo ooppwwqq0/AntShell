@@ -78,7 +78,7 @@ a num | a name | a ip
 * 新增bin下系统命令
 * 配置文件拆分成系统配置和用户自定义配置
 * 拆分部分脚本功能，优化部分结构
-* 新增agent模式（-A|--agent）参数，开启agent登录，开启时禁用sudo模式
+* 新增agent模式（-A|--agent）参数，默认开启agent模式，参数禁用sudo模式
 
 ## 0.3-beta
 
