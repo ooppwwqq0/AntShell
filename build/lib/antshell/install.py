@@ -108,11 +108,15 @@ def get_old_info(conf):
     hosts = {}
     host_key= ['name', 'ip', 'user', 'passwd', 'port', 'sudo']
     key = 1
-    with open(sshfile) as rhost:
-        for line in rhost:
-            lines = line.rstrip().rsplit('|')
-            hosts[key] = dict(zip(host_key, lines))
-            key += 1
+    if os.path.exists(sshfile) and os.path.isfile(sshfile):
+        with open(sshfile) as rhost:
+            for line in rhost:
+                lines = line.rstrip().rsplit('|')
+                hosts[key] = dict(zip(host_key, lines))
+                key += 1
+    else:
+        lines = ["test","127.0.0.1","root","",22,1]
+        hosts[key] = dict(zip(host_key, lines))
     return hosts
 
 

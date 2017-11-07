@@ -138,7 +138,7 @@ def load_argParser():
     langset = conf.get("langset", LANG.get("default"))
     lang = LANG[langset]
     usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
-        [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ]
+        [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ] [ -A ]
         [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
         [ -P -c 'cmd1,cmd2,...' ]
         [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]"""
@@ -161,6 +161,8 @@ def load_argParser():
     g2 = parser.add_argument_group("edit arguments")
     g2.add_argument("-a", "--add", dest="add", action="store", type=str,
                         help=lang["add"], metavar="ip")
+    g2.add_argument("-A", "--agent", dest="agent", action="store_true", default=False,
+                        help=lang["agent"])
     g2.add_argument("-e", "--edit", dest="edit", action="store_true", default=False,
                         help=lang["edit"])
     g2.add_argument("-d", "--delete", dest="dels", action="store", type=str,

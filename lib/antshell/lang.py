@@ -44,6 +44,7 @@ LANG = {
         "user" : "用户名",
         "passwd" : "密码",
         "port" : "端口",
+        "agent" : "开启agent模式",
     },
     "en" : {
         "init" : "Initialize the configuration file and the database",
@@ -71,5 +72,6 @@ LANG = {
         "user" : "username",
         "passwd" : "password",
         "port" : "ports",
+        "agent" : "open agent mode",
     }
 }

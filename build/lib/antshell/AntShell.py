@@ -178,7 +178,8 @@ class SShHandler(Base):
                         username=self.k.get("user"),
                         password=self.k.get("passwd"),
                         pkey=pkey,
-                        look_for_keys=False
+                        allow_agent=True,
+                        look_for_keys=True
                     )
                     return ssh
                 except Exception as e:
@@ -189,8 +190,8 @@ class SShHandler(Base):
                 port=int(self.k.get("port")),
                 username=self.k.get("user"),
                 password=self.k.get("passwd"),
-                allow_agent=False,
-                look_for_keys=False
+                allow_agent=True,
+                look_for_keys=True
             )
         except Exception as e:
             print(e)
@@ -506,7 +507,7 @@ class HostHandle(SShHandler):
         pre_timestamp = time.time()
         data = ''
         input_mode = False
-        sudo_mode = True
+        sudo_mode = False if option.agent else True
         try:
             tty.setraw(sys.stdin.fileno())
             tty.setcbreak(sys.stdin.fileno())
@@ -588,6 +589,7 @@ class HostHandle(SShHandler):
         # 获取连接的隧道并设置窗口大小 Make a channel and set windows size
         win_size = self.get_win_size()
         self.channel = channel = tran.open_session()
+        paramiko.agent.AgentRequestHandler(self.channel)
         channel.get_pty(term='xterm', height=win_size[0], width=win_size[1])
         channel.invoke_shell()
         try:
