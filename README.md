@@ -79,6 +79,7 @@ a num | a name | a ip
 * 配置文件拆分成系统配置和用户自定义配置
 * 拆分部分脚本功能，优化部分结构
 * 新增agent模式（-A|--agent）参数，默认开启agent模式，参数禁用sudo模式
+* 新增登录时打印banner
 
 ## 0.3-beta
 

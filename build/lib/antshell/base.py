@@ -13,7 +13,7 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.release import __prog__, __version__
+from antshell.release import __prog__, __version__, __banner__
 from antshell.lang import LANG
 import os
 import sys

@@ -13,7 +13,7 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import ToolsBox, TqdmBar
+from antshell.base import ToolsBox, TqdmBar, __banner__
 from antshell.base import load_config, load_argParser
 from antshell.install import init_db, convert_to_db
 import os, sys, re
@@ -402,6 +402,7 @@ class HostHandle(SShHandler):
                 except KeyboardInterrupt as e:
                     sys.exit("\r")
         self.hinfo = self.searchHost()[option.num - 1]
+        print(__banner__.lstrip("\n"))
         print(self.hinfo)
 
     def getConn(self):
@@ -636,7 +637,6 @@ def main():
         print(e)
         print(parser.print_help())
     finally:
-        print("close connect")
         sys.exit()
 
 
