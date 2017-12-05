@@ -402,7 +402,8 @@ class HostHandle(SShHandler):
                 except KeyboardInterrupt as e:
                     sys.exit("\r")
         self.hinfo = self.searchHost()[option.num - 1]
-        self.colorMsg(__banner__.lstrip("\n"), "blue")
+        banner_color = conf.get("banner_color")
+        self.colorMsg(__banner__.lstrip("\n"), banner_color)
         print(self.hinfo)
 
     def getConn(self):
