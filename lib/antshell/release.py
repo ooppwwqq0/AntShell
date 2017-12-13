@@ -13,7 +13,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 __prog__ = 'AntShell'
-__version__ = '0.4.22'
+__version__ = '0.4.23'
 __author__  = 'Casstiel'
 __banner__ = """
  _____     _   _____ _       _ _

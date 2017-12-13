@@ -81,6 +81,7 @@ a num | a name | a ip
 * 新增agent模式（-A|--agent）参数，默认开启agent模式，参数禁用sudo模式
 * 新增登录时打印banner
 * 修改banner颜色，增加自定义banner颜色（预设）功能
+* 修复文件传输以及命令执行模式下fast参数无效的bug
 
 ## 0.3-beta
 

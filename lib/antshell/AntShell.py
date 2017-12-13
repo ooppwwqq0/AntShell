@@ -487,6 +487,11 @@ class HostHandle(SShHandler):
     def thstart(self, choose = None):
         """处理多线程任务"""
 
+        if option.v:
+            try:
+                option.num = int(option.v)
+            except Exception as e:
+                option.search = option.v
         pc = self.hinfo if self.hinfo else self.searchHost()
         pc = [pc[option.num - 1],] if option.num else pc
         self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
