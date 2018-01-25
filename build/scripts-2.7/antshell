@@ -1,4 +1,4 @@
-#!/usr/local/product/brew-1.1.5/Cellar/python/2.7.13/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
+#!/usr/local/opt/python/bin/python2.7
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function)
@@ -12,7 +12,7 @@ except Exception:
     pass
 
 try:
-    from antshell import main
+    from antshell.AntShell import main
 except ImportError as e:
     print("load error")
     sys.exit()
