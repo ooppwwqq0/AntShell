@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function)
+import sys
+__metaclass__ = type
+
+__requires__ = ['antshell']
+try:
+    import pkg_resources
+except Exception:
+    pass
+
+try:
+    from antshell import main
+except ImportError as e:
+    print("load error")
+    sys.exit()
+
+if __name__ == "__main__":
+    main()

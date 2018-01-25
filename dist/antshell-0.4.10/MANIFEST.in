@@ -1,0 +1,9 @@
+prune ticket_stubs
+prune hacking
+include README.md
+include requirements.txt
+include sql/init.sql
+include examples/conf.yml
+recursive-include lib/antshell/ *
+include VERSION
+include MANIFEST.in
