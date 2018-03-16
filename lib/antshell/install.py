@@ -13,9 +13,10 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import load_config
+from antshell.base import find_config_file
 import os
 import sys
+import shutil
 import time
 import yaml
 import sqlite3
@@ -103,6 +104,18 @@ def init_db(conf):
         os.system(cmd) if cmd else ""
 
 
+def init_conf():
+    default_path= "~/.antshell"
+    config_name = "antshell.yml"
+    path = find_config_file()
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    if not path:
+        if not os.path.exists(default_path):
+            dpath = os.path.expanduser(default_path)
+            os.makedirs(dpath)
+            shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
+
+
 def get_old_info(conf):
     sshfile = os.path.expanduser(conf.get("ODB_FILE"))
     hosts = {}
@@ -115,12 +128,12 @@ def get_old_info(conf):
                 hosts[key] = dict(zip(host_key, lines))
                 key += 1
     else:
-        lines = ["test","127.0.0.1","root","",22,1]
+        lines = ["test", "127.0.0.1", "root", "", 22, 1]
         hosts[key] = dict(zip(host_key, lines))
     return hosts
 
 
-def convert_to_db(conf):
+def file_convert_to_db(conf):
     dbPath = os.path.expanduser(conf.get("DB_FILE"))
     conn = sqlite3.connect(dbPath)
     db = conn.cursor()
@@ -140,5 +153,14 @@ def convert_to_db(conf):
             print("already has record, skip")
     conn.commit()
     conn.close()
-    sys.exit()
+
+
+def db_convert_to_file(conf):
+    dbPath = os.path.expanduser(conf.get("DB_FILE"))
+    conn = sqlite3.connect(dbPath)
+    db = conn.cursor()
+    sql = """select * from hosts"""
+    db.execute(sql)
+    for i in db:
+        print(i)
 

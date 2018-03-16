@@ -1,0 +1,19 @@
+
+# ssh config
+DB_FILE : ~/.ssh/ant.db
+ODB_FILE : ~/.ssh/autosshrc
+KEY_PATH : ~/.ssh/id_rsa
+
+# not use conf
+BACK_DIR : .sshkeybak
+
+# default user info
+USER : wangping
+PASS : ''
+PORT : 22
+
+# Select the language : zh or en ,default zh
+langset : zh
+
+# red green yellow blue pink blue xx
+banner_color : blue

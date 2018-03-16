@@ -25,7 +25,7 @@ class ToolsBox(object):
 
     """base tools class"""
 
-    def _par(self, k):
+    def __par(self, k):
         """dynamic generation class and add attribute"""
         class o : pass
         for key in k:
@@ -36,7 +36,7 @@ class ToolsBox(object):
         return o
 
 
-    def _dict_factory(self, cursor, row):
+    def __dict_factory(self, cursor, row):
         """turn data into a dictionary"""
         d = {}
         for idx, col in enumerate(cursor.description):
@@ -108,35 +108,50 @@ class TqdmBar(object):
         self.last_b = transferred
 
 
-def load_config():
-    """get conf from config file"""
+def find_config_file():
+    """get all config file list"""
+
     cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
     conf_name = "antshell.yml"
-    conf_path = ["~/.antshell/", "/etc/antshell/", cwd]
-    conf_path = list(map(lambda x:os.path.join(x, conf_name), conf_path))
+    conf_path0 = ["~/.antshell/", "/etc/antshell/", cwd]
 
     path0 = os.getenv("ANTSHELL_CONFIG", None)
     if path0 is not None:
-        conf_path.insert(0, path0)
+        if os.path.isdir(path0):
+            conf_path.insert(0, path0)
+
+    conf_path = list(map(lambda x:os.path.join(x, conf_name), conf_path0))
 
     for path in conf_path:
+        if path and os.path.exists(path) and os.path.isfile(path):
+            break
+    else:
+        path = None
+    return path
+
+
+def load_config():
+    """load config from config file"""
+
+    path = find_config_file()
+    if path:
         path = os.path.expanduser(path)
-        if os.path.exists(path) and os.path.isfile(path):
-            try:
-                conf = yaml.load(open(path))
-                if not conf:
-                    sys.exit()
-                return conf
-            except Exception as e:
-                print(e)
-                sys.exit()
+        conf = yaml.load(open(path))
+        if conf: break
+    else:
+        conf = None
+    return conf
 
 
 def load_argParser():
     """command line parameter"""
     conf = load_config()
-    langset = conf.get("langset", LANG.get("default"))
-    lang = LANG[langset]
+    if conf:
+        langset = conf.get("langset", LANG.get("default"))
+        lang = LANG[langset]
+    else:
+        sys.exit()
+
     usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
         [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ] [ -A ]
         [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]

@@ -15,7 +15,9 @@
 from __future__ import (absolute_import, division, print_function)
 from antshell.base import ToolsBox, TqdmBar, __banner__
 from antshell.base import load_config, load_argParser
-from antshell.install import init_db, convert_to_db
+from antshell.install import init_db, init_conf, file_convert_to_db
+from binascii import hexlify
+from tqdm import tqdm
 import os, sys, re
 import datetime, time
 import yaml
@@ -26,7 +28,6 @@ import pyte
 import errno
 import threading
 import struct, fcntl, signal, socket, select
-from tqdm import tqdm
 try:
     import termios
     import tty
@@ -57,7 +58,7 @@ class Base(ToolsBox):
         try:
             if db_file and os.path.isfile(db_file):
                 self.conn = sqlite3.connect(db_file)
-                self.conn.row_factory = self._dict_factory
+                self.conn.row_factory = self.__dict_factory
                 db = self.conn.cursor()
                 return db
         except Exception as e:
@@ -105,6 +106,23 @@ class SShHandler(Base):
         else:
             return False
         return key
+
+    @staticmethod
+    def agent_auth(transport, username):
+
+        agent = paramiko.Agent()
+        agent_keys = agent.get_keys()
+        if len(agent_keys) == 0:
+            return
+
+        for key in agent_keys:
+            print('Trying ssh-agent key %s' % hexlify(key.get_fingerprint()),)
+            try:
+                transport.auth_publickey(username, key)
+                print('... success!')
+                return
+            except paramiko.SSHException:
+                print('... nope.')
 
     @staticmethod
     def is_output(strings):
@@ -587,6 +605,7 @@ class HostHandle(SShHandler):
         self._chooHost()
         self.k = self.hinfo
         # 发起ssh连接请求 Make a ssh connection
+        paramiko.util.log_to_file("/tmp/paramiko.log")
         ssh = self.get_connection()
 
         tran = ssh.get_transport()
@@ -597,8 +616,8 @@ class HostHandle(SShHandler):
         win_size = self.get_win_size()
         self.channel = channel = tran.open_session()
         paramiko.agent.AgentRequestHandler(self.channel)
-        channel.get_pty(term='xterm', height=win_size[0], width=win_size[1])
-        channel.invoke_shell()
+        self.channel.get_pty(term='xterm', height=win_size[0], width=win_size[1])
+        self.channel.invoke_shell()
         try:
             signal.signal(signal.SIGWINCH, self.set_win_size)
         except:
@@ -624,8 +643,9 @@ def main():
             sys.exit()
         elif option.update:
             init_db(conf)
-            convert_to_db(conf)
+            file_convert_to_db(conf)
             sys.exit()
+
         h = HostHandle()
         if option.lists:
             h.hostLists()
@@ -636,6 +656,7 @@ def main():
             h.addList()
         elif option.para or option.get or option.put:
             h.thstart()
+
         #clear = os.system('clear')
         h.connect()
         h._dbclose()
