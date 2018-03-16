@@ -13,7 +13,7 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import find_config_file
+from base import find_config_file, load_config
 import os
 import sys
 import shutil
@@ -94,7 +94,7 @@ class BaseHandle(object):
         return ahost
 
 
-def init_db(conf):
+def init_db():
     dbPath = os.path.expanduser(conf.get("DB_FILE"))
     if dbPath:
         cwd = os.path.dirname(os.path.realpath(__file__))
@@ -105,18 +105,18 @@ def init_db(conf):
 
 
 def init_conf():
-    default_path= "~/.antshell"
-    config_name = "antshell.yml"
     path = find_config_file()
-    cwd = os.path.dirname(os.path.realpath(__file__))
     if not path:
+        default_path= "~/.antshell"
         if not os.path.exists(default_path):
             dpath = os.path.expanduser(default_path)
             os.makedirs(dpath)
-            shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
+        config_name = "antshell.yml"
+        cwd = os.path.dirname(os.path.realpath(__file__))
+        shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
 
 
-def get_old_info(conf):
+def get_old_info():
     sshfile = os.path.expanduser(conf.get("ODB_FILE"))
     hosts = {}
     host_key= ['name', 'ip', 'user', 'passwd', 'port', 'sudo']
@@ -133,7 +133,7 @@ def get_old_info(conf):
     return hosts
 
 
-def file_convert_to_db(conf):
+def file_convert_to_db():
     dbPath = os.path.expanduser(conf.get("DB_FILE"))
     conn = sqlite3.connect(dbPath)
     db = conn.cursor()
@@ -155,7 +155,7 @@ def file_convert_to_db(conf):
     conn.close()
 
 
-def db_convert_to_file(conf):
+def db_convert_to_file():
     dbPath = os.path.expanduser(conf.get("DB_FILE"))
     conn = sqlite3.connect(dbPath)
     db = conn.cursor()
@@ -164,3 +164,12 @@ def db_convert_to_file(conf):
     for i in db:
         print(i)
 
+
+def main():
+    global conf
+    conf = load_config()
+    db_convert_to_file()
+
+
+if __name__ == "__main__":
+    main()

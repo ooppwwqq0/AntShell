@@ -122,7 +122,8 @@ def find_config_file():
 
     conf_path = list(map(lambda x:os.path.join(x, conf_name), conf_path0))
 
-    for path in conf_path:
+    for cpath in conf_path:
+        path = os.path.expanduser(cpath)
         if path and os.path.exists(path) and os.path.isfile(path):
             break
     else:
@@ -133,11 +134,10 @@ def find_config_file():
 def load_config():
     """load config from config file"""
 
-    path = find_config_file()
-    if path:
-        path = os.path.expanduser(path)
+    cpath = find_config_file()
+    if cpath:
+        path = os.path.expanduser(cpath)
         conf = yaml.load(open(path))
-        if conf: break
     else:
         conf = None
     return conf
@@ -145,12 +145,8 @@ def load_config():
 
 def load_argParser():
     """command line parameter"""
-    conf = load_config()
-    if conf:
-        langset = conf.get("langset", LANG.get("default"))
-        lang = LANG[langset]
-    else:
-        sys.exit()
+    langset = conf.get("langset", LANG.get("default"))
+    lang = LANG[langset]
 
     usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
         [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ] [ -A ]

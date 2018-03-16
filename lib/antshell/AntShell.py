@@ -631,9 +631,15 @@ class HostHandle(SShHandler):
 
 def main():
     """主函数"""
-    global option
+
     global conf
+    global option
+
     conf = load_config()
+    if not conf:
+        print("load config error")
+        sys.exit()
+
     parser = load_argParser()
     option = parser.parse_args()
 
