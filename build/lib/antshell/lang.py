@@ -17,7 +17,7 @@ __metaclass__ = type
 # zh or en
 # help info lang set
 LANG = {
-    "default" :"en",
+    "default" :"zh",
     "zh" : {
         "init" : "初始化配置文件以及数据库",
         "update" : "hosts信息升级成数据库",

@@ -1,12 +1,11 @@
 Metadata-Version: 1.1
 Name: antshell
-Version: 0.4.24
+Version: 0.5.2
 Summary: AntShell Auto SSH
 Home-page: http://c.isme.pub/AntShell
 Author: Casstiel
 Author-email: emo_ooppwwqq0@163.com
 License: GPLv3+
-Description-Content-Type: UNKNOWN
 Description: UNKNOWN
 Platform: UNKNOWN
 Classifier: Development Status :: 5 - Production/Stable

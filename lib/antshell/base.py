@@ -13,8 +13,8 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from release import __prog__, __version__, __banner__
-from lang import LANG
+from antshell.release import __prog__, __version__, __banner__
+from antshell.lang import LANG
 from tqdm import tqdm
 import os
 import sys

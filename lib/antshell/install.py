@@ -13,8 +13,8 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from base import find_config_file, load_config
-from dbtools import getdb
+from antshell.base import find_config_file, load_config
+from antshell.dbtools import getdb
 import os
 import sys
 import shutil

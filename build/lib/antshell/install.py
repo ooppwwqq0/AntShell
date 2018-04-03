@@ -13,14 +13,14 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import load_config
+from antshell.base import find_config_file, load_config
+from antshell.dbtools import getdb
 import os
 import sys
+import shutil
 import time
 import yaml
 import sqlite3
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 
 class BaseHandle(object):
@@ -103,6 +103,18 @@ def init_db(conf):
         os.system(cmd) if cmd else ""
 
 
+def init_conf():
+    path = find_config_file()
+    if not path:
+        default_path= "~/.antshell"
+        if not os.path.exists(default_path):
+            dpath = os.path.expanduser(default_path)
+            os.makedirs(dpath)
+        config_name = "antshell.yml"
+        cwd = os.path.dirname(os.path.realpath(__file__))
+        shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
+
+
 def get_old_info(conf):
     sshfile = os.path.expanduser(conf.get("ODB_FILE"))
     hosts = {}
@@ -115,30 +127,36 @@ def get_old_info(conf):
                 hosts[key] = dict(zip(host_key, lines))
                 key += 1
     else:
-        lines = ["test","127.0.0.1","root","",22,1]
+        lines = ["test", "127.0.0.1", "root", "", 22, 1]
         hosts[key] = dict(zip(host_key, lines))
     return hosts
 
 
-def convert_to_db(conf):
-    dbPath = os.path.expanduser(conf.get("DB_FILE"))
-    conn = sqlite3.connect(dbPath)
-    db = conn.cursor()
+def file_convert_to_db():
+    db = getdb(conf)
     h = get_old_info(conf)
-    for ki in h:
-        k = h[ki]
-        sql = """select * from hosts where name='{name}' and ip='{ip}'
-            and user='{user}' and passwd='{passwd}' and port={port}
-            and sudo={sudo};""".format(**k)
-        db.execute(sql)
-        has = [i for i in db]
+    for k in h:
+        res = db.select(**h[k])
+        has = [x for x in res]
         if len(has) == 0:
-            sql = """insert into hosts(name,ip,user,passwd,port,sudo)
-                values('{name}','{ip}','{user}','{passwd}',{port},{sudo})""".format(**k)
-            db.execute(sql)
+            db.insert(**h[k])
         else:
             print("already has record, skip")
-    conn.commit()
-    conn.close()
-    sys.exit()
 
+
+def db_convert_to_file(conf):
+    db = getdb(conf)
+    res = db.select()
+    for i in res:
+        print(i)
+
+
+def main():
+    global conf
+    conf = load_config()
+    #file_convert_to_db()
+    db_convert_to_file()
+
+
+if __name__ == "__main__":
+    main()
