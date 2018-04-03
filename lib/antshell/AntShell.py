@@ -19,15 +19,12 @@ from install import init_db, init_conf, file_convert_to_db
 from dbtools import getdb
 from binascii import hexlify
 from tqdm import tqdm
-from gevent import monkey
-import gevent
 import math
 import os, sys, re
 import datetime, time
 import paramiko
 import pyte
 import errno
-import threading
 import struct, fcntl, signal, socket, select
 try:
     import termios
@@ -39,8 +36,6 @@ except ImportError:
 if sys.version < '3':
     reload(sys)
     sys.setdefaultencoding('utf-8')
-
-monkey.patch_all()
 
 
 class SShHandler(BaseToolsBox):
@@ -152,7 +147,7 @@ class SShHandler(BaseToolsBox):
         self.screen.reset()
         return command
 
-    def get_connection(self):
+    def get_connection(self, k):
         """
         获取连接成功后的ssh
         """
@@ -163,10 +158,10 @@ class SShHandler(BaseToolsBox):
             pkey = self.auth_key()
             if pkey:
                 ssh.connect(
-                    hostname=self.k.get("ip"),
-                    port=int(self.k.get("port")),
-                    username=self.k.get("user"),
-                    password=self.k.get("passwd"),
+                    hostname=k.get("ip"),
+                    port=int(k.get("port")),
+                    username=k.get("user"),
+                    password=k.get("passwd"),
                     pkey=pkey,
                     allow_agent=True,
                     look_for_keys=True)
@@ -292,13 +287,13 @@ class HostHandle(SShHandler):
                 option.num = int(option.v)
             except Exception as e:
                 self.search.append(option.v)
-        self.hinfo = self.searchHost()
+        hosts = self.searchHost()
         option.num = 1 if self.Hlen == 1 and not option.num else option.num
         if not option.num:
             clear = os.system('clear')
             banner_color = conf.get("banner_color")
             self.colorMsg(__banner__.lstrip("\n"), banner_color)
-            self.printHosts(hinfo = self.hinfo, cmode=option.mode)
+            self.printHosts(hosts = hosts, cmode=option.mode)
             limit, offset = 0, 15
             while not option.num:
                 try:
@@ -307,138 +302,37 @@ class HostHandle(SShHandler):
                         self.colorMsg(c="cblue", flag=True).format(msg))
                     if n in ('q', 'Q', 'quit', 'exit'):
                         sys.exit()
+                    elif n in ('c', 'C', 'clear'):
+                        self.search = []
+                        hosts = self.searchHost()
                     elif n in ('n','N'):
                         limit = (limit - 1) if limit > 1 else 1
                     elif n in ('m','M'):
                         limit = (limit + 1)
                     else:
                         try:
-                            print(n)
-                            print(self.Hlen)
                             option.num = int(n) if int(n) <= self.Hlen else 0
-                            print(option.num)
                         except Exception as e:
                             if n:
                                 self.search.append(n)
-                                self.hinfo = self.searchHost()
+                                hosts = self.searchHost()
                             else:
                                 limit = (limit + 1)
-                    option.num = 1 if self.Hlen == 1 else 0
+                    option.num = 1 if self.Hlen == 1 else option.num
                 except EOFError as e:
                     print("\r")
                 except KeyboardInterrupt as e:
                     sys.exit("\r")
                 pmax = int(math.ceil(self.Hlen/offset))
                 limit = limit if limit <= pmax else pmax
-                self.printLine(hinfo=self.hinfo, limit=limit, offset=offset, pmax=pmax)
-        self.hinfo = self.searchHost()[option.num - 1]
+                self.printLine(hosts=hosts, limit=limit, offset=offset, pmax=pmax)
+        host = self.searchHost()[option.num - 1]
         banner_color = conf.get("banner_color")
         self.colorMsg(__banner__.lstrip("\n"), banner_color)
-        print(self.hinfo)
+        print(host)
+        return host
 
-    def paraComm(self, p, ch):
-        """远程执行命令"""
-
-        self.colorMsg("%s start" % self.k["ip"], "blue")
-        cmds = self.getArgs(option.commod, option.fs)
-        for cmd in cmds:
-            self.colorMsg("  exec commod : " + cmd, "yellow")
-            if self.k["sudo"] == '1' and self.k["user"] != "root":
-                cmd = "sudo " + cmd
-            stdin, stdout, stderr = p.exec_command(cmd)
-            for line in stdout.readlines():
-                print("\t" + line.strip("\n"))
-            if stderr.read():
-                if self.k["sudo"] == '1' and self.k["user"] != "root":
-                    ch.send("sudo su - \n")
-                    buff = ""
-                    while not buff.endswith("# "):
-                        buff = bytes.decode(ch.recv(9999))
-                ch.send(cmd + "\n")
-                time.sleep(0.3)
-                buff = ""
-                while not buff.endswith("# "):
-                    buff = bytes.decode(ch.recv(9999))
-                for line in buff.strip().split("\n"):
-                    if (cmd not in line) and ("]#" not in line):
-                        print("\t" + line)
-
-    def paraSftp(self, sftp):
-        """远程文件传输"""
-
-        self.colorMsg("%s start" % self.k["ip"], c = "blue")
-        try:
-            file_name = option.file if option.file else os.path.basename(
-                option.get)
-            if option.get:
-                remotepath = self.getPath([option.get, file_name])
-                localpath = self.getPath([self.base_path, file_name])
-                self.colorMsg("  remote path : " + remotepath +
-                              "  >>>  local path : " + localpath, "yellow")
-                with tqdm(
-                        unit_scale=True, miniters=1,
-                        desc=" " * 8 + file_name) as t:
-                    p = TqdmBar(t)
-                    sftp.get(remotepath, localpath, callback=p.progressBar)
-                print("\t下载文件成功")
-            elif option.put:
-                localpath = self.getPath([self.base_path, option.file])
-                remotepath = self.getPath([option.put, option.file])
-                self.colorMsg("  local path : " + localpath +
-                              "  >>>  remote path : " + remotepath, "yellow")
-                with tqdm(
-                        unit_scale=True, miniters=1,
-                        desc=" " * 8 + file_name) as t:
-                    p = TqdmBar(t)
-                    sftp.put(localpath, remotepath, callback=p.progressBar)
-                print('\t上传文件成功')
-        except Exception as e:
-            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (self.k["ip"], e))
-
-    def para(self, k):
-        """采用paramiko模块执行"""
-
-        self.k = k
-        try:
-            ssh = self.get_connection()
-            tran = ssh.get_transport()
-            if option.get or option.put:
-                sftp = tran.open_sftp_client()
-                self.paraSftp(sftp)
-            elif option.commod:
-                ch = ssh.invoke_shell()
-                ch.settimeout(5)
-                self.paraComm(ssh, ch)
-        except Exception as e:
-            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
-        finally:
-            tran.close()
-            ssh.close()
-
-    def thstart(self, choose=None):
-        """处理多线程任务"""
-
-        if option.v:
-            try:
-                option.num = int(option.v)
-            except Exception as e:
-                option.search = option.v
-        pc = self.hinfo if self.hinfo else self.searchHost()
-        pc = [
-            pc[option.num - 1],
-        ] if option.num else pc
-        self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
-        threads = []
-        for ki in pc:
-            th = threading.Thread(target=self.para(ki))
-            th.start()
-            threads.append(th)
-        for th in threads:
-            th.join()
-        self.colorMsg("=== Ending %s ===" % datetime.datetime.now())
-        sys.exit()
-
-    def posix_shell(self):
+    def posix_shell(self, k):
         """
         Use paramiko channel connect server interactive.
         使用paramiko模块的channel，连接后端，进入交互式
@@ -483,7 +377,7 @@ class HostHandle(SShHandler):
                             data += x
                     except socket.timeout:
                         pass
-                if self.k["sudo"] == 1 and self.k["user"] != "root" and sudo_mode:
+                if k["sudo"] == 1 and k["user"] != "root" and sudo_mode:
                     self.channel.send("sudo su -\r")
                     sudo_mode = False
                 if sys.stdin in r:
@@ -518,11 +412,10 @@ class HostHandle(SShHandler):
         """
         连接服务器
         """
-        self.__chooHost()
-        self.k = self.hinfo
+        k = self.__chooHost()
         # 发起ssh连接请求 Make a ssh connection
         paramiko.util.log_to_file("/tmp/paramiko.log")
-        ssh = self.get_connection()
+        ssh = self.get_connection(k=k)
 
         tran = ssh.get_transport()
         tran.set_keepalive(30)
@@ -540,7 +433,7 @@ class HostHandle(SShHandler):
         except:
             pass
 
-        self.posix_shell()
+        self.posix_shell(k=k)
 
         channel.close()
         tran.close()

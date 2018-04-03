@@ -98,12 +98,12 @@ class BaseToolsBox(object):
         """
         return args.rsplit(fs) if args else False
 
-    def printHosts(self, hinfo, cmode = None):
+    def printHosts(self, hosts, cmode = None):
         """主机列表输出"""
         count = 56
         # maxm = int(int(self.columns) / count)
         maxm = 2
-        Hlen = len(hinfo)
+        Hlen = len(hosts)
         if not cmode:
             mode = maxm if maxm < 6 else 5
         else:
@@ -119,7 +119,7 @@ class BaseToolsBox(object):
                 print("  |  ", end=end)
 
         for key in range(1, Hlen + 1):
-            k = self.hinfo[key - 1]
+            k = hosts[key - 1]
             h = " {0} {1} {2}@{3}:{4} ".format(
                 self.colorMsg(c="yellow", flag=True).format(
                     "{0: >4}".format("[%s]" % str(key))),
@@ -147,7 +147,7 @@ class BaseToolsBox(object):
             if i < mode - 1:
                 print("  |  ", end=end)
 
-    def printLine(self, hinfo, limit=1, offset=15, pmax=0):
+    def printLine(self, hosts, limit=1, offset=15, pmax=0):
         """主机列表分页输出"""
         limit = limit if limit else 1
         f = (limit-1) * offset + 1
@@ -162,7 +162,7 @@ class BaseToolsBox(object):
         self.colorMsg(m=msg, c="white", title=True)
 
         for key in range(f,l if l<= self.Hlen else self.Hlen+1):
-            k = self.hinfo[key - 1]
+            k = hosts[key - 1]
             h = " {0} {1} {2}@{3}:{4} ".format(
                 self.colorMsg(c="yellow", flag=True).format(
                     "{0: >4}".format("[%s]" % str(key))),
