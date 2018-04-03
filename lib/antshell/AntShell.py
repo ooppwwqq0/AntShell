@@ -206,6 +206,8 @@ class HostHandle(SShHandler,ParaTools):
 
         if include:
             self.search.append(include)
+        if option.search not in self.search:
+            self.search.append(option.search)
         match = True if self.isIp(option.search, True) else match
         search = self.__getSearch(self.search, match)
         hosts = self.db.select(w=search)
@@ -278,7 +280,7 @@ class HostHandle(SShHandler,ParaTools):
             self.colorMsg("ip %s not exist !" % option.dels)
         sys.exit()
 
-    def __chooHost(self, num=0):
+    def __chooHost(self):
         """用户交互形式选定主机"""
 
         if option.v:
@@ -302,6 +304,7 @@ class HostHandle(SShHandler,ParaTools):
                     if n in ('q', 'Q', 'quit', 'exit'):
                         sys.exit()
                     elif n in ('c', 'C', 'clear'):
+                        option.search = None
                         self.search = []
                         hosts = self.searchHost()
                     elif n in ('n','N'):
@@ -324,7 +327,7 @@ class HostHandle(SShHandler,ParaTools):
                     sys.exit("\r")
                 pmax = int(math.ceil(self.Hlen/offset))
                 limit = limit if limit <= pmax else pmax
-                self.printLine(hosts=hosts, limit=limit, offset=offset, pmax=pmax)
+                self.printHosts(hosts=hosts, limit=limit, offset=offset, pmax=pmax, flag=False)
         host = self.searchHost()[option.num - 1]
         banner_color = conf.get("banner_color")
         self.colorMsg(__banner__.lstrip("\n"), banner_color)

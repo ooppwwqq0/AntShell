@@ -47,13 +47,9 @@ class BaseToolsBox(object):
         return o
 
     @staticmethod
-    def getPath(args, L=False):
+    def getPath(paths, L=False):
         """Absolute path generation"""
-
-        p = ""
-        for val in args:
-            p = os.path.join(p, val)
-        return p
+        return reduce(lambda x,y:os.path.join(x,y), paths)
 
     @staticmethod
     def colorMsg(m="", c="red", flag=False, title=False, end='\n'):
@@ -99,57 +95,33 @@ class BaseToolsBox(object):
         """
         return args.rsplit(fs) if args else False
 
-    def printHosts(self, hosts, cmode = None):
+    def __printInfo(self, key, k):
+        h = " {0} {1} {2}@{3}:{4} ".format(
+            self.colorMsg(c="yellow", flag=True).format(
+                "{0: >4}".format("[%s]" % str(key))),
+            self.colorMsg(c="green", flag=True).format(
+                "{0: <15}".format(k["name"])),
+            self.colorMsg(c="green", flag=True).format(
+                "{0: >10}".format(k["user"])),
+            self.colorMsg(c="green", flag=True).format(
+                "{0: >15}".format(k["ip"])),
+            self.colorMsg(c="green", flag=True).format(
+                "{0: <5}".format(k["port"])),
+        )
+        return h
+
+    def printHosts(self, hosts, cmode = None, limit=1, offset=15, pmax=0, flag=True):
         """主机列表输出"""
         count = 56
-        # maxm = int(int(self.columns) / count)
-        maxm = 2
+        maxm = int(int(self.columns) / count)
         Hlen = len(hosts)
         if not cmode:
             mode = maxm if maxm < 6 else 5
         else:
             mode = cmode if cmode <= maxm else maxm
         mode = Hlen if Hlen < mode else mode
-        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
-        msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
+        mode = mode if flag else 1
 
-        for i in range(mode):
-            end = "\n" if i == mode - 1 else ""
-            self.colorMsg(m=msg, c="white", title=True, end=end)
-            if i < mode - 1:
-                print("  |  ", end=end)
-
-        for key in range(1, Hlen + 1):
-            k = hosts[key - 1]
-            h = " {0} {1} {2}@{3}:{4} ".format(
-                self.colorMsg(c="yellow", flag=True).format(
-                    "{0: >4}".format("[%s]" % str(key))),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <15}".format(k["name"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >10}".format(k["user"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >15}".format(k["ip"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <5}".format(k["port"])),
-            )
-            rem = key % mode
-            if mode == 1 or key == Hlen:
-                print(h)
-            elif rem == 0:
-                print(h)
-            elif rem < mode:
-                print(h, end='')
-                print("  |  ", end='')
-
-        for i in range(mode):
-            end = "\n" if i == mode - 1 else ""
-            self.colorMsg(m=msg, c="cblue", title=True, end=end)
-            if i < mode - 1:
-                print("  |  ", end=end)
-
-    def printLine(self, hosts, limit=1, offset=15, pmax=0):
-        """主机列表分页输出"""
         limit = limit if limit else 1
         f = (limit-1) * offset + 1
         l = limit * offset + 1
@@ -159,26 +131,35 @@ class BaseToolsBox(object):
         tails = ' All Pages {0: <4} {1: <17} [n/N Back] Pages {2: <4}'
         tmsg = tails.format('[%s]' %pmax,'','[%s]'%limit)
 
-        clear = os.system('clear')
-        self.colorMsg(m=msg, c="white", title=True)
+        if not flag:
+            clear = os.system('clear')
+        for i in range(mode):
+            end = "\n" if i == mode - 1 else ""
+            self.colorMsg(m=msg, c="white", title=True, end=end)
+            if i < mode - 1:
+                print("  |  ", end=end)
 
-        for key in range(f,l if l<= self.Hlen else self.Hlen+1):
+        for key in range(f, (Hlen + 1) if flag else (l if l<= self.Hlen else self.Hlen+1)):
             k = hosts[key - 1]
-            h = " {0} {1} {2}@{3}:{4} ".format(
-                self.colorMsg(c="yellow", flag=True).format(
-                    "{0: >4}".format("[%s]" % str(key))),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <15}".format(k["name"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >10}".format(k["user"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >15}".format(k["ip"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <5}".format(k["port"])),
-            )
-            print(h)
+            h = self.__printInfo(key, k)
+            if flag:
+                rem = key % mode
+                if mode == 1 or key == Hlen:
+                    print(h)
+                elif rem == 0:
+                    print(h)
+                elif rem < mode:
+                    print(h, end='')
+                    print("  |  ", end='')
+            else:
+                print(h)
 
-        self.colorMsg(m=tmsg, c="cblue", title=True)
+        for i in range(mode):
+            end = "\n" if i == mode - 1 else ""
+            self.colorMsg(m=msg if flag else tmsg, c="cblue", title=True, end=end)
+            if i < mode - 1:
+                print("  |  ", end=end)
+
 
 class TqdmBar(tqdm):
     """文件传输进度条tqdm"""

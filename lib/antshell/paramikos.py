@@ -17,7 +17,6 @@ from base import TqdmBar
 from gevent import monkey
 import gevent
 import paramiko
-import threading
 import datetime
 import sys
 
