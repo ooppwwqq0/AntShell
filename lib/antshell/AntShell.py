@@ -220,7 +220,8 @@ class HostHandle(SShHandler):
         self.Hlen = len(hosts)
         return hosts
 
-    def __getSearch(self, includes, match, search=""):
+    @staticmethod
+    def __getSearch(includes, match, search=""):
         if includes:
             if match:
                 search = """and ip in ({0}) """.format(",".join(
@@ -232,7 +233,8 @@ class HostHandle(SShHandler):
                             includes))))
         return search
 
-    def __getInfo(self, ip):
+    @staticmethod
+    def __getInfo(ip):
         """获取用户相关信息"""
         info = {
             "name": option.name if option.name else ip,
@@ -244,7 +246,7 @@ class HostHandle(SShHandler):
         info["sudo"] = 0 if info["user"] == "root" else 1
         return info
 
-    def _editList(self, ip):
+    def __editList(self, ip):
         """主机信息"""
         ipt = self.isIp(ip, True)
         if ipt:
@@ -262,7 +264,7 @@ class HostHandle(SShHandler):
 
     def addList(self):
         """添加主机信息"""
-        res, info = self._editList(option.add)
+        res, info = self.__editList(option.add)
         if len(res) == 1:
             self.colorMsg("already exist !")
         elif len(res) == 0:
@@ -273,7 +275,7 @@ class HostHandle(SShHandler):
 
     def delList(self):
         """删除主机信息"""
-        res, info = self._editList(option.dels)
+        res, info = self.__editList(option.dels)
         if len(res) > 0:
             print(info)
             task = [self.db.delete(rid = x["id"]) for x in res]
@@ -281,90 +283,6 @@ class HostHandle(SShHandler):
         elif len(res) == 0:
             self.colorMsg("ip %s not exist !" % option.dels)
         sys.exit()
-
-    def printHosts(self):
-        count = 56
-        maxm = int(int(self.columns) / count)
-        self.hinfo = self.hinfo if self.hinfo else self.searchHost()
-        self.Hlen = Hlen = len(self.hinfo)
-        if not option.mode:
-            mode = maxm if maxm < 6 else 5
-        else:
-            mode = option.mode if option.mode <= maxm else maxm
-        mode = Hlen if Hlen < mode else mode
-        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
-        msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
-
-        clear = os.system('clear')
-        banner_color = conf.get("banner_color")
-        self.colorMsg(__banner__.lstrip("\n"), banner_color)
-        for i in range(mode):
-            end = "\n" if i == mode - 1 else ""
-            self.colorMsg(m=msg, c="white", title=True, end=end)
-            if i < mode - 1:
-                print("  |  ", end=end)
-
-        for key in range(1, Hlen + 1):
-            k = self.hinfo[key - 1]
-            h = " {0} {1} {2}@{3}:{4} ".format(
-                self.colorMsg(c="yellow", flag=True).format(
-                    "{0: >4}".format("[%s]" % str(key))),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <15}".format(k["name"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >10}".format(k["user"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >15}".format(k["ip"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <5}".format(k["port"])),
-            )
-            rem = key % mode
-            if mode == 1 or key == Hlen:
-                print(h)
-            elif rem == 0:
-                print(h)
-            elif rem < mode:
-                print(h, end='')
-                print("  |  ", end='')
-
-        for i in range(mode):
-            end = "\n" if i == mode - 1 else ""
-            self.colorMsg(m=msg, c="cblue", title=True, end=end)
-            if i < mode - 1:
-                print("  |  ", end=end)
-
-    def printLine(self, limit=1, offset=15):
-        self.hinfo = self.searchHost()
-        pmax = int(math.ceil(self.Hlen/offset))
-        limit = limit if limit <=pmax else pmax
-        f = (limit-1) * offset + 1
-        l = limit * offset + 1
-
-        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
-        msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
-        tails = ' All Pages {0: <4} {1: <17} [n/N Back] Pages {2: <4}'
-        tmsg = tails.format('[%s]' %pmax,'','[%s]'%limit)
-
-        clear = os.system('clear')
-        self.colorMsg(m=msg, c="white", title=True)
-
-        for key in range(f,l if l<= self.Hlen else self.Hlen):
-            k = self.hinfo[key - 1]
-            h = " {0} {1} {2}@{3}:{4} ".format(
-                self.colorMsg(c="yellow", flag=True).format(
-                    "{0: >4}".format("[%s]" % str(key))),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <15}".format(k["name"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >10}".format(k["user"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: >15}".format(k["ip"])),
-                self.colorMsg(c="green", flag=True).format(
-                    "{0: <5}".format(k["port"])),
-            )
-            print(h)
-
-        self.colorMsg(m=tmsg, c="cblue", title=True)
 
     def __chooHost(self, num=0):
         """用户交互形式选定主机"""
@@ -377,8 +295,11 @@ class HostHandle(SShHandler):
         self.hinfo = self.searchHost()
         option.num = 1 if self.Hlen == 1 and not option.num else option.num
         if not option.num:
-            self.printHosts()
-            limit, offset = 1, 15
+            clear = os.system('clear')
+            banner_color = conf.get("banner_color")
+            self.colorMsg(__banner__.lstrip("\n"), banner_color)
+            self.printHosts(hinfo = self.hinfo, cmode=option.mode)
+            limit, offset = 0, 15
             while not option.num:
                 try:
                     msg = """\ninput num or [ 'q' | ctrl-c ] to quit!\nServer Id >> """
@@ -389,29 +310,31 @@ class HostHandle(SShHandler):
                     elif n in ('n','N'):
                         limit = (limit - 1) if limit > 1 else 1
                     elif n in ('m','M'):
-                        pmax = int(math.ceil(self.Hlen/offset))
-                        limit = (limit + 1) if (limit + 1) <=pmax else limit
+                        limit = (limit + 1)
                     else:
                         try:
+                            print(n)
+                            print(self.Hlen)
                             option.num = int(n) if int(n) <= self.Hlen else 0
+                            print(option.num)
                         except Exception as e:
                             if n:
                                 self.search.append(n)
+                                self.hinfo = self.searchHost()
+                            else:
+                                limit = (limit + 1)
+                    option.num = 1 if self.Hlen == 1 else 0
                 except EOFError as e:
                     print("\r")
                 except KeyboardInterrupt as e:
                     sys.exit("\r")
-                self.printLine(limit=limit, offset=offset)
+                pmax = int(math.ceil(self.Hlen/offset))
+                limit = limit if limit <= pmax else pmax
+                self.printLine(hinfo=self.hinfo, limit=limit, offset=offset, pmax=pmax)
         self.hinfo = self.searchHost()[option.num - 1]
         banner_color = conf.get("banner_color")
         self.colorMsg(__banner__.lstrip("\n"), banner_color)
         print(self.hinfo)
-
-    def getConn(self):
-        """处理生成登陆信息"""
-
-        self.__chooHost()
-        return self.hinfo[option.num - 1]
 
     def paraComm(self, p, ch):
         """远程执行命令"""

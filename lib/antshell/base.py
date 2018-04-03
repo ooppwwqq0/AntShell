@@ -98,6 +98,86 @@ class BaseToolsBox(object):
         """
         return args.rsplit(fs) if args else False
 
+    def printHosts(self, hinfo, cmode = None):
+        """主机列表输出"""
+        count = 56
+        # maxm = int(int(self.columns) / count)
+        maxm = 2
+        Hlen = len(hinfo)
+        if not cmode:
+            mode = maxm if maxm < 6 else 5
+        else:
+            mode = cmode if cmode <= maxm else maxm
+        mode = Hlen if Hlen < mode else mode
+        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
+        msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
+
+        for i in range(mode):
+            end = "\n" if i == mode - 1 else ""
+            self.colorMsg(m=msg, c="white", title=True, end=end)
+            if i < mode - 1:
+                print("  |  ", end=end)
+
+        for key in range(1, Hlen + 1):
+            k = self.hinfo[key - 1]
+            h = " {0} {1} {2}@{3}:{4} ".format(
+                self.colorMsg(c="yellow", flag=True).format(
+                    "{0: >4}".format("[%s]" % str(key))),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: <15}".format(k["name"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: >10}".format(k["user"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: >15}".format(k["ip"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: <5}".format(k["port"])),
+            )
+            rem = key % mode
+            if mode == 1 or key == Hlen:
+                print(h)
+            elif rem == 0:
+                print(h)
+            elif rem < mode:
+                print(h, end='')
+                print("  |  ", end='')
+
+        for i in range(mode):
+            end = "\n" if i == mode - 1 else ""
+            self.colorMsg(m=msg, c="cblue", title=True, end=end)
+            if i < mode - 1:
+                print("  |  ", end=end)
+
+    def printLine(self, hinfo, limit=1, offset=15, pmax=0):
+        """主机列表分页输出"""
+        limit = limit if limit else 1
+        f = (limit-1) * offset + 1
+        l = limit * offset + 1
+
+        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
+        msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
+        tails = ' All Pages {0: <4} {1: <17} [n/N Back] Pages {2: <4}'
+        tmsg = tails.format('[%s]' %pmax,'','[%s]'%limit)
+
+        clear = os.system('clear')
+        self.colorMsg(m=msg, c="white", title=True)
+
+        for key in range(f,l if l<= self.Hlen else self.Hlen+1):
+            k = self.hinfo[key - 1]
+            h = " {0} {1} {2}@{3}:{4} ".format(
+                self.colorMsg(c="yellow", flag=True).format(
+                    "{0: >4}".format("[%s]" % str(key))),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: <15}".format(k["name"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: >10}".format(k["user"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: >15}".format(k["ip"])),
+                self.colorMsg(c="green", flag=True).format(
+                    "{0: <5}".format(k["port"])),
+            )
+            print(h)
+
+        self.colorMsg(m=tmsg, c="cblue", title=True)
 
 class TqdmBar(object):
     """文件传输进度条tqdm"""
