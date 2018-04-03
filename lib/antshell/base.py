@@ -15,6 +15,7 @@
 from __future__ import (absolute_import, division, print_function)
 from release import __prog__, __version__, __banner__
 from lang import LANG
+from tqdm import tqdm
 import os
 import sys
 import yaml
@@ -179,18 +180,14 @@ class BaseToolsBox(object):
 
         self.colorMsg(m=tmsg, c="cblue", title=True)
 
-class TqdmBar(object):
+class TqdmBar(tqdm):
     """文件传输进度条tqdm"""
-
-    def __init__(self, t):
-        self.t = t
-        self.last_b = 0
-
-    def progressBar(self, transferred, toBeTransferred, suffix=''):
+    def update_to(self, b=1, bsize=1,tsize=None):
         """tqdm进度条"""
-        self.t.total = toBeTransferred
-        self.t.update(transferred - self.last_b)
-        self.last_b = transferred
+        offset = 1
+        self.total = bsize * offset
+        self.update(b * offset - self.n)
+        self.n = b * offset
 
 
 def find_config_file():

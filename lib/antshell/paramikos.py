@@ -14,7 +14,6 @@
 
 from __future__ import (absolute_import, division, print_function)
 from base import TqdmBar
-from tqdm import tqdm
 from gevent import monkey
 import gevent
 import paramiko
@@ -26,6 +25,7 @@ monkey.patch_all()
 
 
 class ParaTools(object):
+    """批量操作"""
 
     def paraComm(self, k, p, ch, cmds):
         """远程执行命令"""
@@ -62,22 +62,16 @@ class ParaTools(object):
                 localpath = self.getPath([self.base_path, file_name])
                 self.colorMsg("  remote path : " + remotepath +
                               "  >>>  local path : " + localpath, "yellow")
-                with tqdm(
-                        unit_scale=True, miniters=1,
-                        desc=" " * 8 + file_name) as t:
-                    p = TqdmBar(t)
-                    sftp.get(remotepath, localpath, callback=p.progressBar)
+                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                    sftp.get(remotepath, localpath, callback=t.update_to)
                 print("\t下载文件成功")
             elif option.put:
                 localpath = self.getPath([self.base_path, option.file])
                 remotepath = self.getPath([option.put, option.file])
                 self.colorMsg("  local path : " + localpath +
                               "  >>>  remote path : " + remotepath, "yellow")
-                with tqdm(
-                        unit_scale=True, miniters=1,
-                        desc=" " * 8 + file_name) as t:
-                    p = TqdmBar(t)
-                    sftp.put(localpath, remotepath, callback=p.progressBar)
+                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                    sftp.put(localpath, remotepath, callback=t.update_to)
                 print('\t上传文件成功')
         except Exception as e:
             self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
