@@ -8,4 +8,5 @@ paramiko
 ansible
 pyte
 tqdm
+gevent
 setuptools
