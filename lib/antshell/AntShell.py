@@ -196,7 +196,6 @@ class SShHandler(BaseToolsBox):
 class HostHandle(SShHandler,ParaTools):
     """主机交互连接处理"""
 
-
     def searchHost(self, include=None, pattern=False, match=False):
         """获取主机信息, 基于sqlite3
             include : 用于过滤列表
