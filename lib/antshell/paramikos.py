@@ -13,50 +13,47 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from base import BaseToolsBox, TqdmBar, __banner__
-from base import load_config, load_argParser
-from install import init_db, init_conf, file_convert_to_db
+from base import TqdmBar
+from tqdm import tqdm
 from gevent import monkey
 import gevent
 import paramiko
 import threading
+import datetime
+import sys
 
 monkey.patch_all()
 
 
 class ParaTools(object):
 
-    def paraComm(self, p, ch):
+    def paraComm(self, k, p, ch, cmds):
         """远程执行命令"""
 
-        self.colorMsg("%s start" % self.k["ip"], "blue")
-        cmds = self.getArgs(option.commod, option.fs)
+        res = {"ip":k.get("ip"),"cmds":{}}
         for cmd in cmds:
-            self.colorMsg("  exec commod : " + cmd, "yellow")
-            if self.k["sudo"] == '1' and self.k["user"] != "root":
+            if k["sudo"] == '1' and k["user"] != "root":
                 cmd = "sudo " + cmd
             stdin, stdout, stderr = p.exec_command(cmd)
-            for line in stdout.readlines():
-                print("\t" + line.strip("\n"))
+            res["cmds"][cmd] = [x for x in stdout.readlines()]
             if stderr.read():
-                if self.k["sudo"] == '1' and self.k["user"] != "root":
-                    ch.send("sudo su - \n")
-                    buff = ""
-                    while not buff.endswith("# "):
-                        buff = bytes.decode(ch.recv(9999))
+                buff = ""
+                while not buff.endswith("# "):
+                    buff = bytes.decode(ch.recv(9999))
                 ch.send(cmd + "\n")
-                time.sleep(0.3)
                 buff = ""
                 while not buff.endswith("# "):
                     buff = bytes.decode(ch.recv(9999))
                 for line in buff.strip().split("\n"):
                     if (cmd not in line) and ("]#" not in line):
                         print("\t" + line)
+        p.close()
+        return res
 
-    def paraSftp(self, sftp):
+    def paraSftp(self, sftp, k, option):
         """远程文件传输"""
 
-        self.colorMsg("%s start" % self.k["ip"], c = "blue")
+        self.colorMsg("%s start >>>" % k["ip"], c = "blue")
         try:
             file_name = option.file if option.file else os.path.basename(
                 option.get)
@@ -83,47 +80,48 @@ class ParaTools(object):
                     sftp.put(localpath, remotepath, callback=p.progressBar)
                 print('\t上传文件成功')
         except Exception as e:
-            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (self.k["ip"], e))
+            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
 
-    def para(self, k):
+    def para(self, k, r, option):
         """采用paramiko模块执行"""
 
-        self.k = k
         try:
-            ssh = self.get_connection()
+            ssh = self.get_connection(k=k)
             tran = ssh.get_transport()
             if option.get or option.put:
                 sftp = tran.open_sftp_client()
-                self.paraSftp(sftp)
+                self.paraSftp(sftp, k, option)
             elif option.commod:
                 ch = ssh.invoke_shell()
                 ch.settimeout(5)
-                self.paraComm(ssh, ch)
+                cmds = self.getArgs(option.commod, option.fs)
+                res = self.paraComm(k, ssh, ch, cmds)
+                r.append(res)
         except Exception as e:
-            self.colorMsg('%s\t 运行失败,失败原因\r\n\t%s' % (k["ip"], e))
-        finally:
-            tran.close()
-            ssh.close()
+            self.colorMsg('%s error >>>\r\n\t%s' % (k["ip"], e))
 
-    def thstart(self, choose=None):
-        """处理多线程任务"""
-
+    def mygevent(self, option):
+        """协程方式处理并行任务"""
         if option.v:
             try:
                 option.num = int(option.v)
             except Exception as e:
-                option.search = option.v
-        pc = self.hinfo if self.hinfo else self.searchHost()
+                self.search.append(option.v)
+        if option.search:
+            self.search.append(option.search)
+        pc = self.searchHost()
         pc = [
             pc[option.num - 1],
         ] if option.num else pc
         self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
-        threads = []
-        for ki in pc:
-            th = threading.Thread(target=self.para(ki))
-            th.start()
-            threads.append(th)
-        for th in threads:
-            th.join()
+        res_list = []
+        tasks = [gevent.spawn(self.para, x, res_list, option) for x in pc]
+        gevent.joinall(tasks)
+        for info in res_list:
+            self.colorMsg("%s start >>>" % info["ip"], "blue")
+            for c in info["cmds"]:
+                self.colorMsg("  exec commod : " + c, "yellow")
+                for line in info["cmds"][c]:
+                    self.colorMsg("\t" + line.strip("\n"), "green")
         self.colorMsg("=== Ending %s ===" % datetime.datetime.now())
         sys.exit()

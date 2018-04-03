@@ -13,15 +13,15 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from base import BaseToolsBox, TqdmBar, __banner__
+from base import BaseToolsBox, __banner__
 from base import load_config, load_argParser
 from install import init_db, init_conf, file_convert_to_db
+from paramikos import ParaTools
 from dbtools import getdb
 from binascii import hexlify
-from tqdm import tqdm
 import math
 import os, sys, re
-import datetime, time
+import time
 import paramiko
 import pyte
 import errno
@@ -167,8 +167,7 @@ class SShHandler(BaseToolsBox):
                     look_for_keys=True)
                 return ssh
         except Exception as e:
-            print(e)
-            sys.exit()
+            pass
 
     @staticmethod
     def get_win_size():
@@ -194,7 +193,7 @@ class SShHandler(BaseToolsBox):
             pass
 
 
-class HostHandle(SShHandler):
+class HostHandle(SShHandler,ParaTools):
     """主机交互连接处理"""
 
 
@@ -472,7 +471,7 @@ def main():
         elif option.add:
             h.addList()
         elif option.para or option.get or option.put:
-            h.thstart()
+            h.mygevent(option)
 
         #clear = os.system('clear')
         h.connect()
