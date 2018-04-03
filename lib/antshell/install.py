@@ -14,14 +14,13 @@
 
 from __future__ import (absolute_import, division, print_function)
 from base import find_config_file, load_config
+from dbtools import getdb
 import os
 import sys
 import shutil
 import time
 import yaml
 import sqlite3
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 
 class BaseHandle(object):
@@ -94,7 +93,7 @@ class BaseHandle(object):
         return ahost
 
 
-def init_db():
+def init_db(conf):
     dbPath = os.path.expanduser(conf.get("DB_FILE"))
     if dbPath:
         cwd = os.path.dirname(os.path.realpath(__file__))
@@ -116,7 +115,7 @@ def init_conf():
         shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
 
 
-def get_old_info():
+def get_old_info(conf):
     sshfile = os.path.expanduser(conf.get("ODB_FILE"))
     hosts = {}
     host_key= ['name', 'ip', 'user', 'passwd', 'port', 'sudo']
@@ -134,40 +133,28 @@ def get_old_info():
 
 
 def file_convert_to_db():
-    dbPath = os.path.expanduser(conf.get("DB_FILE"))
-    conn = sqlite3.connect(dbPath)
-    db = conn.cursor()
+    db = getdb(conf)
     h = get_old_info(conf)
-    for ki in h:
-        k = h[ki]
-        sql = """select * from hosts where name='{name}' and ip='{ip}'
-            and user='{user}' and passwd='{passwd}' and port={port}
-            and sudo={sudo};""".format(**k)
-        db.execute(sql)
-        has = [i for i in db]
+    for k in h:
+        res = db.select(**h[k])
+        has = [x for x in res]
         if len(has) == 0:
-            sql = """insert into hosts(name,ip,user,passwd,port,sudo)
-                values('{name}','{ip}','{user}','{passwd}',{port},{sudo})""".format(**k)
-            db.execute(sql)
+            db.insert(**h[k])
         else:
             print("already has record, skip")
-    conn.commit()
-    conn.close()
 
 
-def db_convert_to_file():
-    dbPath = os.path.expanduser(conf.get("DB_FILE"))
-    conn = sqlite3.connect(dbPath)
-    db = conn.cursor()
-    sql = """select * from hosts"""
-    db.execute(sql)
-    for i in db:
+def db_convert_to_file(conf):
+    db = getdb(conf)
+    res = db.select()
+    for i in res:
         print(i)
 
 
 def main():
     global conf
     conf = load_config()
+    #file_convert_to_db()
     db_convert_to_file()
 
 
