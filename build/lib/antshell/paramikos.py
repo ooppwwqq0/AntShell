@@ -17,8 +17,17 @@ from antshell.base import TqdmBar
 from gevent import monkey
 import gevent
 import paramiko
-import datetime
+import datetime, time
 import sys
+import os
+import errno
+import fcntl, socket, select
+try:
+    import termios
+    import tty
+except ImportError:
+    time.sleep(3)
+    sys.exit()
 
 monkey.patch_all()
 
@@ -26,7 +35,60 @@ monkey.patch_all()
 class ParaTools(object):
     """批量操作"""
 
-    def paraComm(self, k, p, ch, cmds):
+    @staticmethod
+    def auth_key(key_path):
+        """获取本地private_key"""
+        if key_path and os.path.isfile(key_path):
+            try:
+                key = paramiko.RSAKey.from_private_key_file(key_path)
+            except paramiko.PasswordRequiredException:
+                passwd = getpass.getpass["RSA key password:"]
+                key = paramiko.RSAKey.from_private_key_file(key_path, passwd)
+        else:
+            return False
+        return key
+
+    @staticmethod
+    def agent_auth(transport, username):
+
+        agent = paramiko.Agent()
+        agent_keys = agent.get_keys()
+        if len(agent_keys) == 0:
+            return
+
+        for key in agent_keys:
+            print('Trying ssh-agent key %s' % hexlify(key.get_fingerprint()), )
+            try:
+                transport.auth_publickey(username, key)
+                print('... success!')
+                return
+            except paramiko.SSHException:
+                print('... nope.')
+
+    def get_connection(self, k, key_path):
+        """
+        获取连接成功后的ssh
+        """
+        ssh = paramiko.SSHClient()
+        # ssh.load_system_host_keys()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            pkey = self.auth_key(key_path)
+            if pkey:
+                ssh.connect(
+                    hostname=k.get("ip"),
+                    port=int(k.get("port")),
+                    username=k.get("user"),
+                    password=k.get("passwd"),
+                    pkey=pkey,
+                    allow_agent=True,
+                    look_for_keys=True)
+                return ssh
+        except Exception as e:
+            raise e
+
+    @staticmethod
+    def paraComm(k, p, ch, cmds):
         """远程执行命令"""
 
         res = {"ip":k.get("ip"),"cmds":{}}
@@ -118,3 +180,108 @@ class ParaTools(object):
                     self.colorMsg("\t" + line.strip("\n"), "green")
         self.colorMsg("=== Ending %s ===" % datetime.datetime.now())
         sys.exit()
+
+    def posix_shell(self, k, agent):
+        """
+        Use paramiko channel connect server interactive.
+        使用paramiko模块的channel，连接后端，进入交互式
+        """
+        old_tty = termios.tcgetattr(sys.stdin)
+        pre_timestamp = time.time()
+        data = ''
+        input_mode = False
+        sudo_mode = False if agent else True
+        try:
+            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
+            self.channel.settimeout(0.0)
+
+            while True:
+                try:
+                    r, w, e = select.select([self.channel, sys.stdin], [], [])
+                    flag = fcntl.fcntl(sys.stdin, fcntl.F_GETFL, 0)
+                    fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL,
+                                flag | os.O_NONBLOCK)
+                except Exception:
+                    pass
+                if self.channel in r:
+                    try:
+                        x = self.channel.recv(1024)
+                        if len(x) == 0:
+                            break
+                        index = 0
+                        len_x = len(x)
+                        if x == "sudo su -\r\n" and not sudo_mode:
+                            continue
+                        while index < len_x:
+                            try:
+                                n = os.write(sys.stdout.fileno(), x[index:])
+                                sys.stdout.flush()
+                                index += n
+                            except OSError as msg:
+                                if msg.errno == errno.EAGAIN:
+                                    continue
+                        self.vim_data += x
+                        if input_mode:
+                            data += x
+                    except socket.timeout:
+                        pass
+                if k["sudo"] == 1 and k["user"] != "root" and sudo_mode:
+                    self.channel.send("sudo su -\r")
+                    sudo_mode = False
+                if sys.stdin in r:
+                    try:
+                        x = os.read(sys.stdin.fileno(), 4096)
+                    except OSError:
+                        pass
+                    input_mode = True
+                    if self.is_output(str(x)):
+                        # 如果len(str(x)) > 1 说明是复制输入的
+                        if len(str(x)) > 1:
+                            data = x
+                        match = self.vim_end_pattern.findall(self.vim_data)
+                        if match:
+                            if self.vim_flag or len(match) == 2:
+                                self.vim_flag = False
+                            else:
+                                self.vim_flag = True
+                        elif not self.vim_flag:
+                            self.vim_flag = False
+                            data = self.deal_command(data)[0:200]
+                        data = ''
+                        self.vim_data = ''
+                        input_mode = False
+                    if len(x) == 0:
+                        break
+                    self.channel.send(x)
+        finally:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
+
+    def get_connect(self, k, key_path, agent):
+        """
+        连接服务器
+        """
+        # 发起ssh连接请求 Make a ssh connection
+        paramiko.util.log_to_file("/tmp/paramiko.log")
+        ssh = self.get_connection(k=k, key_path=key_path)
+
+        tran = ssh.get_transport()
+        tran.set_keepalive(30)
+        tran.use_compression(True)
+
+        # 获取连接的隧道并设置窗口大小 Make a channel and set windows size
+        win_size = self.get_win_size()
+        self.channel = channel = tran.open_session()
+        paramiko.agent.AgentRequestHandler(self.channel)
+        self.channel.get_pty(
+            term='xterm', height=win_size[0], width=win_size[1])
+        self.channel.invoke_shell()
+        try:
+            signal.signal(signal.SIGWINCH, self.set_win_size)
+        except:
+            pass
+
+        self.posix_shell(k=k, agent=agent)
+
+        channel.close()
+        tran.close()

@@ -25,16 +25,6 @@ import argparse
 class BaseToolsBox(object):
     """base tools class"""
 
-    def __init__(self):
-        """初始化"""
-
-        self.HOME = os.environ["HOME"]
-        self.rows, self.columns = os.popen("stty size", "r").read().split()
-        self.base_path = os.getcwd()
-        self.hinfo = []
-        self.Hlen = 0
-        self.search = []
-
     def __par(self, k):
         """dynamic generation class and add attribute"""
 
