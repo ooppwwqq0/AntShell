@@ -35,15 +35,14 @@ monkey.patch_all()
 class ParaTools(object):
     """批量操作"""
 
-    @staticmethod
-    def auth_key(key_path):
+    def auth_key(self):
         """获取本地private_key"""
-        if key_path and os.path.isfile(key_path):
+        if self.key_path and os.path.isfile(self.key_path):
             try:
-                key = paramiko.RSAKey.from_private_key_file(key_path)
+                key = paramiko.RSAKey.from_private_key_file(self.key_path)
             except paramiko.PasswordRequiredException:
                 passwd = getpass.getpass["RSA key password:"]
-                key = paramiko.RSAKey.from_private_key_file(key_path, passwd)
+                key = paramiko.RSAKey.from_private_key_file(self.key_path, passwd)
         else:
             return False
         return key
@@ -65,7 +64,7 @@ class ParaTools(object):
             except paramiko.SSHException:
                 print('... nope.')
 
-    def get_connection(self, k, key_path):
+    def get_connection(self, k):
         """
         获取连接成功后的ssh
         """
@@ -73,7 +72,7 @@ class ParaTools(object):
         # ssh.load_system_host_keys()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            pkey = self.auth_key(key_path)
+            pkey = self.auth_key()
             if pkey:
                 ssh.connect(
                     hostname=k.get("ip"),
@@ -257,13 +256,13 @@ class ParaTools(object):
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
 
-    def get_connect(self, k, key_path, agent):
+    def get_connect(self, k, agent):
         """
         连接服务器
         """
         # 发起ssh连接请求 Make a ssh connection
         paramiko.util.log_to_file("/tmp/paramiko.log")
-        ssh = self.get_connection(k=k, key_path=key_path)
+        ssh = self.get_connection(k=k)
 
         tran = ssh.get_transport()
         tran.set_keepalive(30)

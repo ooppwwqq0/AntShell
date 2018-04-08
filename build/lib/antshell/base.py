@@ -100,8 +100,9 @@ class BaseToolsBox(object):
         )
         return h
 
-    def printHosts(self, hosts, cmode = None, limit=1, offset=15, pmax=0, flag=True):
+    def printHosts(self, hosts="", cmode = None, limit=1, offset=15, pmax=0, flag=True):
         """主机列表输出"""
+        hosts = hosts if hosts else self.searchHost()
         count = 56
         maxm = int(int(self.columns) / count)
         Hlen = len(hosts)

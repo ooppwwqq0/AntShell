@@ -41,6 +41,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         self.Hlen = 0
         self.search = []
         self.db = getdb(conf)
+        self.key_path = os.path.expanduser(conf.get("KEY_PATH"))
 
     def searchHost(self, include=None, pattern=False, match=False):
         """获取主机信息, 基于sqlite3
@@ -179,8 +180,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         banner_color = conf.get("banner_color")
         self.colorMsg(__banner__.lstrip("\n"), banner_color)
         print(hosts)
-        key_path = os.path.expanduser(conf.get("KEY_PATH"))
-        self.get_connect(hosts, key_path=key_path, agent=option.agent)
+        self.get_connect(hosts, agent=option.agent)
 
 
 def main():
