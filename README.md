@@ -89,6 +89,7 @@ a num | a name | a ip
 	* 主机列表输出
 	* 获取sshkey位置认证
     * 修复拆分后没导入signal模块导致的不能自动变更终端大小的bug-0.5.7
+    * 修复python3 input兼容问题，修复python bytes 与 str兼容问题 0.5.8
 
 ## 0.4-beta
 * 修复stty无法随终端大小变化的bug

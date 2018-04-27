@@ -25,6 +25,7 @@ import sys
 import time
 
 if sys.version < '3':
+    input = raw_input
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
@@ -145,7 +146,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
             while not option.num:
                 try:
                     msg = """\ninput num or [ 'q' | ctrl-c ] to quit!\nServer Id >> """
-                    n = raw_input(
+                    n = input(
                         self.colorMsg(c="cblue", flag=True).format(msg))
                     if n in ('q', 'Q', 'quit', 'exit'):
                         sys.exit()

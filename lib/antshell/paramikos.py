@@ -211,7 +211,7 @@ class ParaTools(object):
                             break
                         index = 0
                         len_x = len(x)
-                        if x == "sudo su -\r\n" and not sudo_mode:
+                        if x == b'sudo su -\r\n' and not sudo_mode:
                             continue
                         while index < len_x:
                             try:
@@ -221,9 +221,10 @@ class ParaTools(object):
                             except OSError as msg:
                                 if msg.errno == errno.EAGAIN:
                                     continue
-                        self.vim_data += x
+
+                        self.vim_data += str(x)
                         if input_mode:
-                            data += x
+                            data += str(x)
                     except socket.timeout:
                         pass
                 if k["sudo"] == 1 and k["user"] != "root" and sudo_mode:
@@ -254,6 +255,8 @@ class ParaTools(object):
                     if len(x) == 0:
                         break
                     self.channel.send(x)
+        except Exception as e:
+            raise e
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
 
