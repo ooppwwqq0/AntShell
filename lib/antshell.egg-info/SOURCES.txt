@@ -21,11 +21,6 @@ lib/antshell.egg-info/SOURCES.txt
 lib/antshell.egg-info/dependency_links.txt
 lib/antshell.egg-info/requires.txt
 lib/antshell.egg-info/top_level.txt
-lib/antshell/__pycache__/base.cpython-36.pyc
-lib/antshell/__pycache__/dbtools.cpython-36.pyc
-lib/antshell/__pycache__/install.cpython-36.pyc
-lib/antshell/__pycache__/lang.cpython-36.pyc
-lib/antshell/__pycache__/release.cpython-36.pyc
 lib/antshell/config/antshell.yml
 lib/antshell/sql/init.sql
 sql/init.sql
