@@ -88,6 +88,7 @@ a num | a name | a ip
 * 修复bug
 	* 主机列表输出
 	* 获取sshkey位置认证
+    * 修复拆分后没导入signal模块导致的不能自动变更终端大小的bug-0.5.7
 
 ## 0.4-beta
 * 修复stty无法随终端大小变化的bug

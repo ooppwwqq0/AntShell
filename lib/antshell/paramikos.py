@@ -22,6 +22,7 @@ import sys
 import os
 import errno
 import fcntl, socket, select
+import signal
 try:
     import termios
     import tty
