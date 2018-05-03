@@ -68,6 +68,7 @@ class getdb(object):
             vals = '"' + '","'.join(val) + '"'
             sql = sql.format(t=self.t, rows=rows, vals=vals)
             self.__db.execute(sql)
+            self.__conn.commit()
             return True
         else:
             return False

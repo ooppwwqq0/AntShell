@@ -20,6 +20,9 @@ import os
 import sys
 import yaml
 import argparse
+if sys.version >= '3':
+    from functools import reduce
+
 
 
 class BaseToolsBox(object):
