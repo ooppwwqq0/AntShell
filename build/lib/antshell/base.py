@@ -175,7 +175,7 @@ def find_config_file():
     path0 = os.getenv("ANTSHELL_CONFIG", None)
     if path0 is not None:
         if os.path.isdir(path0):
-            conf_path.insert(0, path0)
+            conf_path0.insert(0, path0)
 
     conf_path = list(map(lambda x: os.path.join(x, conf_name), conf_path0))
 

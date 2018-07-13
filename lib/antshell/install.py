@@ -107,8 +107,8 @@ def init_conf():
     path = find_config_file()
     if not path:
         default_path= "~/.antshell"
-        if not os.path.exists(default_path):
-            dpath = os.path.expanduser(default_path)
+        dpath = os.path.expanduser(default_path)
+        if not os.path.exists(dpath):
             os.makedirs(dpath)
         config_name = "antshell.yml"
         cwd = os.path.dirname(os.path.realpath(__file__))

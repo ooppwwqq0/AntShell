@@ -193,6 +193,7 @@ def main():
     conf = load_config()
     if not conf:
         print("load config error")
+        init_conf()
         sys.exit()
 
     parser = load_argParser()
