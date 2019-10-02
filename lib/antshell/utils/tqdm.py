@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
 #|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
@@ -10,14 +13,16 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+import sys
+from tqdm import tqdm
 
-__prog__ = 'AntShell'
-__version__ = '0.6.0'
-__author__  = 'Casstiel'
-__banner__ = """
- _____     _   _____ _       _ _
-|  _  |___| |_|   __| |_ ___| | |
-|     |   |  _|__   |   | -_| | |
-|__|__|_|_|_| |_____|_|_|___|_|_|
-"""
+
+class TqdmBar(tqdm):
+    '''
+    文件传输进度条tqdm
+    '''
+    def update_to(self, b=1, bsize=1,tsize=None):
+        offset = 1
+        self.total = bsize * offset
+        self.update(b * offset - self.n)
+        self.n = b * offset

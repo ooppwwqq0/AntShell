@@ -13,68 +13,38 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import BaseToolsBox, __banner__
-from antshell.base import load_config, load_argParser
-from antshell.install import init_db, init_conf, file_convert_to_db
+from antshell.config import CONFIG
+from antshell.install import init_db
 from antshell.paramikos import ParaTools
-from antshell.dbtools import getdb
-from antshell.ssh import SShTools
+from antshell.utils.parser import load_argParser
+from antshell.utils.errors import DeBug
+from antshell.utils.sqlite import Hosts
+from antshell.utils.ssh import SShTools
+from antshell.utils.release import __banner__
+from antshell.utils.six import PY2
+
 import math
 import os
 import sys
 import time
 
-if sys.version < '3':
+if PY2:
     input = raw_input
     reload(sys)
     sys.setdefaultencoding('utf-8')
 
+DEBUG = CONFIG.DEFAULT.DEBUG
 
-class HostHandle(BaseToolsBox, SShTools, ParaTools):
+
+class HostHandle(SShTools, ParaTools):
     """主机交互连接处理"""
 
     def __init__(self):
-        super(HostHandle,self).__init__()
+        super(HostHandle, self).__init__()
         self.HOME = os.environ["HOME"]
-        self.rows, self.columns = os.popen("stty size", "r").read().split()
-        self.base_path = os.getcwd()
         self.hinfo = []
         self.Hlen = 0
-        self.search = []
-        self.db = getdb(conf)
-        self.key_path = os.path.expanduser(conf.get("KEY_PATH"))
-
-    def searchHost(self, include=None, pattern=False, match=False):
-        """获取主机信息, 基于sqlite3
-            include : 用于过滤列表
-            pattern : 开启返回空字典，默认False（不返回）
-            match : 开启精确匹配模式，默认False（模糊匹配）
-        """
-
-        if include:
-            self.search.append(include)
-        if option.search not in self.search:
-            self.search.append(option.search)
-        match = True if self.isIp(option.search, True) else match
-        search = self.__getSearch(set(self.search), match)
-        hosts = self.db.select(w=search)
-        if not hosts and not pattern:
-            hosts = self.db.select()
-        self.Hlen = len(hosts)
-        return hosts
-
-    @staticmethod
-    def __getSearch(includes, match, search=""):
-        if includes:
-            if match:
-                search = """and ip in ({0}) """.format(",".join(
-                    list(map(lambda x: "'%s'" % x, includes))))
-            else:
-                search = """and ({0})""".format(" or ".join(
-                    list(
-                        map(lambda x: "name like '%%{0}%%' or ip like '%%{0}%%'".format(x),
-                            includes))))
-        return search
+        self.hosts = Hosts
 
     @staticmethod
     def __getInfo(ip):
@@ -82,18 +52,20 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         info = {
             "name": option.name if option.name else ip,
             "ip": ip,
-            "user": option.user if option.user else conf.get("USER"),
-            "passwd": option.passwd if option.passwd else conf.get("PASS"),
-            "port": option.port if option.port else conf.get("PORT"),
+            "user": option.user if option.user else CONFIG.USER.USERNAME,
+            "passwd": option.passwd if option.passwd else CONFIG.USER.PASSWORD,
+            "port": option.port if option.port else CONFIG.USER.PORT,
+            "sudo": option.sudo,
+            "bastion": 1 if option.bastion else 0
         }
-        info["sudo"] = 0 if info["user"] == "root" else 1
+
         return info
 
     def __editList(self, ip):
         """主机信息"""
         ipt = self.isIp(ip, True)
         if ipt:
-            res = self.searchHost(ip,True,True)
+            res = self.searchHost(include=ip, pattern=True, match=True, search=option.search)
             info = self.__getInfo(ip)
             res = list(filter(
                 lambda x:x["user"] == info.get("user") \
@@ -111,7 +83,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         if len(res) == 1:
             self.colorMsg("already exist !")
         elif len(res) == 0:
-            self.db.insert(**info)
+            self.hosts.insert(**info)
         else:
             print(res)
             sys.exit()
@@ -121,7 +93,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         res, info = self.__editList(option.dels)
         if len(res) > 0:
             print(info)
-            task = [self.db.delete(rid = x["id"]) for x in res]
+            task = [self.hosts.delete(rid = x["id"]) for x in res]
             self.colorMsg("del ip %s success !" % option.dels, "blue")
         elif len(res) == 0:
             self.colorMsg("ip %s not exist !" % option.dels)
@@ -133,13 +105,13 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
         if option.v:
             try:
                 option.num = int(option.v)
-            except Exception as e:
+            except Exception:
                 self.search.append(option.v)
-        hosts = self.searchHost()
+        hosts = self.searchHost(search=option.search)
         option.num = 1 if self.Hlen == 1 else option.num
         if not option.num:
-            clear = os.system('clear')
-            banner_color = conf.get("banner_color")
+            os.system('clear')
+            banner_color = CONFIG.DEFAULT.BANNER_COLOR
             self.colorMsg(__banner__.lstrip("\n"), banner_color)
             self.printHosts(hosts = hosts, cmode=option.mode)
             limit, offset = 0, 15
@@ -153,7 +125,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
                     elif n in ('c', 'C', 'clear'):
                         option.search = None
                         self.search = []
-                        hosts = self.searchHost()
+                        hosts = self.searchHost(search=option.search)
                     elif n in ('n','N'):
                         limit = (limit - 1) if limit > 1 else 1
                     elif n in ('m','M'):
@@ -164,7 +136,7 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
                         except Exception as e:
                             if n:
                                 self.search.append(n)
-                                hosts = self.searchHost()
+                                hosts = self.searchHost(search=option.search)
                             else:
                                 limit = (limit + 1)
                         option.num = 1 if self.Hlen == 1 else option.num
@@ -177,36 +149,24 @@ class HostHandle(BaseToolsBox, SShTools, ParaTools):
                 pmax = int(math.ceil(self.Hlen/offset))
                 limit = limit if limit <= pmax else pmax
                 self.printHosts(hosts=hosts, limit=limit, offset=offset, pmax=pmax, flag=False)
-        hosts = self.searchHost()[option.num - 1]
-        banner_color = conf.get("banner_color")
+        hosts = self.searchHost(search=option.search)[option.num - 1]
+        banner_color = CONFIG.DEFAULT.BANNER_COLOR
         self.colorMsg(__banner__.lstrip("\n"), banner_color)
-        print(hosts)
-        self.get_connect(hosts, agent=option.agent)
+        DeBug(hosts, DEBUG)
+        self.get_connect(hosts, agent=option.agent, sudo=option.sudo)
 
 
 def main():
     """主函数"""
 
-    global conf
     global option
-
-    conf = load_config()
-    if not conf:
-        print("load config error")
-        init_conf()
-        sys.exit()
 
     parser = load_argParser()
     option = parser.parse_args()
 
     try:
         if option.init:
-            init_db(conf)
-            init_conf()
-            sys.exit()
-        elif option.update:
-            init_db(conf)
-            file_convert_to_db(conf)
+            init_db()
             sys.exit()
 
         h = HostHandle()

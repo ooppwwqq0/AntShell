@@ -13,16 +13,21 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import TqdmBar
+from antshell.base import BaseToolsBox
+from antshell.utils.tqdm import TqdmBar
+from antshell.utils.errors import DeBug
+from antshell.bastion import GetBastionConfig, GetPasswdByTotp
+from antshell.config import CONFIG
 from gevent import monkey
 import gevent
 import paramiko
 import datetime, time
 import sys
 import os
-import errno
-import fcntl, socket, select
-import signal
+import fcntl, errno, signal, socket, select
+import getpass
+from binascii import hexlify
+
 try:
     import termios
     import tty
@@ -32,18 +37,24 @@ except ImportError:
 
 monkey.patch_all()
 
+DEBUG = CONFIG.DEFAULT.DEBUG
 
-class ParaTools(object):
-    """批量操作"""
+class ParaTools(BaseToolsBox):
+    '''
+    paramiko操作封装
+    '''
 
     def auth_key(self):
-        """获取本地private_key"""
-        if self.key_path and os.path.isfile(self.key_path):
+        '''
+        获取本地private_key
+        '''
+        key_path = os.path.expanduser(CONFIG.DEFAULT.KEY_PATH)
+        if key_path and os.path.isfile(key_path):
             try:
-                key = paramiko.RSAKey.from_private_key_file(self.key_path)
+                key = paramiko.RSAKey.from_private_key_file(key_path)
             except paramiko.PasswordRequiredException:
-                passwd = getpass.getpass["RSA key password:"]
-                key = paramiko.RSAKey.from_private_key_file(self.key_path, passwd)
+                passwd = getpass.getpass["Password:"]
+                key = paramiko.RSAKey.from_private_key_file(key_path, passwd)
         else:
             return False
         return key
@@ -74,7 +85,18 @@ class ParaTools(object):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             pkey = self.auth_key()
-            if pkey:
+            BASTION = k.get("bastion")
+            if BASTION:
+                bastion = GetBastionConfig()
+                
+                ssh.connect(
+                    hostname=bastion.get("host"),
+                    port=int(bastion.get("port")),
+                    username=bastion.get("user"),
+                    password=bastion.get("passwd"),
+                    allow_agent=True,
+                    look_for_keys=False)
+            elif pkey:
                 ssh.connect(
                     hostname=k.get("ip"),
                     port=int(k.get("port")),
@@ -83,7 +105,7 @@ class ParaTools(object):
                     pkey=pkey,
                     allow_agent=True,
                     look_for_keys=True)
-                return ssh
+            return ssh
         except Exception as e:
             raise e
 
@@ -160,7 +182,7 @@ class ParaTools(object):
         if option.v:
             try:
                 option.num = int(option.v)
-            except Exception as e:
+            except Exception:
                 self.search.append(option.v)
         if option.search:
             self.search.append(option.search)
@@ -181,7 +203,7 @@ class ParaTools(object):
         self.colorMsg("=== Ending %s ===" % datetime.datetime.now())
         sys.exit()
 
-    def posix_shell(self, k, agent):
+    def posix_shell(self, k, agent, sudo):
         """
         Use paramiko channel connect server interactive.
         使用paramiko模块的channel，连接后端，进入交互式
@@ -191,6 +213,7 @@ class ParaTools(object):
         data = ''
         input_mode = False
         sudo_mode = False if agent else True
+        bastion_mode = True
         try:
             tty.setraw(sys.stdin.fileno())
             tty.setcbreak(sys.stdin.fileno())
@@ -204,6 +227,7 @@ class ParaTools(object):
                                 flag | os.O_NONBLOCK)
                 except Exception:
                     pass
+                # 接收返回输出到屏幕
                 if self.channel in r:
                     try:
                         x = self.channel.recv(1024)
@@ -211,7 +235,7 @@ class ParaTools(object):
                             break
                         index = 0
                         len_x = len(x)
-                        if x == b'sudo su -\r\n' and not sudo_mode:
+                        if x == b'sudo -iu\r\n' and not sudo_mode:
                             continue
                         while index < len_x:
                             try:
@@ -227,12 +251,19 @@ class ParaTools(object):
                             data += str(x)
                     except socket.timeout:
                         pass
-                if k["sudo"] == 1 and k["user"] != "root" and sudo_mode:
-                    self.channel.send("sudo su -\r")
+                # 堡垒机模式
+                if k.get("bastion") == 1 and bastion_mode:
+                    self.channel.send(k.get("ip") + " " + str(k.get("port")) + "\r")
+                    bastion_mode = False
+                # sudo模式
+                elif k.get("sudo") and sudo_mode:
+                    sudo_user = sudo if sudo else k.get("sudo")
+                    self.channel.send("sudo -iu " + sudo_user + "\r")
                     sudo_mode = False
+                # 接收用户输入发送到server
                 if sys.stdin in r:
                     try:
-                        x = os.read(sys.stdin.fileno(), 4096)
+                        x = os.read(sys.stdin.fileno(), 8192)
                     except OSError:
                         pass
                     input_mode = True
@@ -248,7 +279,7 @@ class ParaTools(object):
                                 self.vim_flag = True
                         elif not self.vim_flag:
                             self.vim_flag = False
-                            data = self.deal_command(data)[0:200]
+                            data = self.deal_command(data)[0:1024]
                         data = ''
                         self.vim_data = ''
                         input_mode = False
@@ -260,12 +291,12 @@ class ParaTools(object):
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
 
-    def get_connect(self, k, agent):
+    def get_connect(self, k, agent, sudo):
         """
         连接服务器
         """
         # 发起ssh连接请求 Make a ssh connection
-        paramiko.util.log_to_file("/tmp/paramiko.log")
+        # paramiko.util.log_to_file("/tmp/paramiko.log")
         ssh = self.get_connection(k=k)
 
         tran = ssh.get_transport()
@@ -284,7 +315,7 @@ class ParaTools(object):
         except:
             pass
 
-        self.posix_shell(k=k, agent=agent)
+        self.posix_shell(k=k, agent=agent, sudo=sudo)
 
         channel.close()
         tran.close()

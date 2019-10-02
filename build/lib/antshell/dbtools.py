@@ -23,9 +23,9 @@ class getdb(object):
 
     def __init__(self, conf, t="hosts"):
         self.t = t
-        self.__conf = conf
-        self.__conn = self.__connect()
-        self.__db = self.__conn.cursor()
+        self.conf = conf
+        self.conn = self.__connect()
+        self.db = self.conn.cursor()
 
     @staticmethod
     def __dict_factory(cursor, row):
@@ -39,7 +39,7 @@ class getdb(object):
     def __connect(self):
         """connect db"""
 
-        dbPath = os.path.expanduser(self.__conf.get("DB_FILE"))
+        dbPath = os.path.expanduser(self.conf.get("DB_FILE"))
         if dbPath and os.path.isfile(dbPath):
             conn = sqlite3.connect(dbPath)
             conn.row_factory = self.__dict_factory
@@ -56,8 +56,8 @@ class getdb(object):
             sql = sql.format(self.t, where)
         else:
             sql = sql.format(self.t, "")
-        self.__db.execute(sql)
-        return [i for i in self.__db]
+        self.db.execute(sql)
+        return [i for i in self.db]
 
     def insert(self, **kwargs):
         sql = """insert into {t}({rows}) values({vals});"""
@@ -67,21 +67,21 @@ class getdb(object):
             rows = ','.join(row)
             vals = '"' + '","'.join(val) + '"'
             sql = sql.format(t=self.t, rows=rows, vals=vals)
-            self.__db.execute(sql)
-            self.__conn.commit()
+            self.db.execute(sql)
+            self.conn.commit()
             return True
         else:
             return False
 
-    def delete(self, rid): 
+    def delete(self, rid):
         sql = """delete from {0} where id = {1};"""
         sql = sql.format(self.t, rid)
-        self.__db.execute(sql)
+        self.db.execute(sql)
         return True
 
     def update(self):
         pass
 
     def __del__(self):
-        self.__conn.commit()
-        self.__conn.close()
+        self.conn.commit()
+        self.conn.close()

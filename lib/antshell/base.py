@@ -13,31 +13,22 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.release import __prog__, __version__, __banner__
-from antshell.lang import LANG
-from tqdm import tqdm
+from antshell.utils.release import __prog__, __version__, __banner__
+from antshell.utils.sqlite import Hosts
 import os
 import sys
-import yaml
-import argparse
 if sys.version >= '3':
     from functools import reduce
-
 
 
 class BaseToolsBox(object):
     """base tools class"""
 
-    def __par(self, k):
-        """dynamic generation class and add attribute"""
-
-        class o:pass
-        for key in k:
-            if str(type(k[key])) == "<type 'dict'>":
-                setattr(o, key, self._par(k[key]))
-            else:
-                setattr(o, key, k[key])
-        return o
+    def __init__(self, *args, **kwargs):
+        self.rows, self.columns = os.popen("stty size", "r").read().split()
+        self.base_path = os.getcwd()
+        self.search = []
+        self.vim_data = ''
 
     @staticmethod
     def getPath(paths, L=False):
@@ -88,14 +79,49 @@ class BaseToolsBox(object):
         """
         return args.rsplit(fs) if args else False
 
+
+    @staticmethod
+    def __getSearch(includes, match, search=""):
+        if includes:
+            if match:
+                search = """and ip in ({0}) """.format(",".join(
+                    list(map(lambda x: "'%s'" % x, includes))))
+            else:
+                search = """and ({0})""".format(" or ".join(
+                    list(
+                        map(lambda x: "name like '%%{0}%%' or ip like '%%{0}%%'".format(x),
+                            includes))))
+        return search
+
+    def searchHost(self, include=None, pattern=False, match=False, search=""):
+        """获取主机信息, 基于sqlite3
+            include : 用于过滤列表
+            pattern : 开启返回空字典，默认False（不返回）
+            match : 开启精确匹配模式，默认False（模糊匹配）
+        """
+
+        if include:
+            self.search.append(include)
+        if search not in self.search:
+            self.search.append(search)
+        match = True if self.isIp(search, True) else match
+        search = self.__getSearch(set(self.search), match)
+        hosts = Hosts.select(w=search)
+        if not hosts and not pattern:
+            hosts = Hosts.select()
+        self.Hlen = len(hosts)
+        return hosts
+
+
     def __printInfo(self, key, k):
-        h = " {0} {1} {2}@{3}:{4} ".format(
+        user_name = k["sudo"] if k["sudo"] else k["user"]
+        h = "{0} {1} {2}@{3}:{4} ".format(
             self.colorMsg(c="yellow", flag=True).format(
-                "{0: >4}".format("[%s]" % str(key))),
+                "{0: >5}".format("[%s]" % str(key))),
             self.colorMsg(c="green", flag=True).format(
-                "{0: <15}".format(k["name"])),
+                "{0: <14}".format(k["name"])),
             self.colorMsg(c="green", flag=True).format(
-                "{0: >10}".format(k["user"])),
+                "{0: >12}".format(user_name)),
             self.colorMsg(c="green", flag=True).format(
                 "{0: >15}".format(k["ip"])),
             self.colorMsg(c="green", flag=True).format(
@@ -106,7 +132,7 @@ class BaseToolsBox(object):
     def printHosts(self, hosts="", cmode = None, limit=1, offset=15, pmax=0, flag=True):
         """主机列表输出"""
         hosts = hosts if hosts else self.searchHost()
-        count = 56
+        count = 57
         maxm = int(int(self.columns) / count)
         Hlen = len(hosts)
         if not cmode:
@@ -120,13 +146,13 @@ class BaseToolsBox(object):
         f = (limit-1) * offset + 1
         l = limit * offset + 1
 
-        lines = ' {0: >4} {1: <15} {2: >10}@{3: >15}:{4: <5} '
+        lines = '{0: >5} {1: <13} {2: >13}@{3: >15}:{4: <5} '
         msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
-        tails = ' All Pages {0: <4} {1: <17} [n/N Back] Pages {2: <4}'
+        tails = ' All Pages {0: <5} {1: <16} [n/N Back] Pages {2: <5}'
         tmsg = tails.format('[%s]' %pmax,'','[%s]'%limit)
 
         if not flag:
-            clear = os.system('clear')
+            os.system('clear')
         for i in range(mode):
             end = "\n" if i == mode - 1 else ""
             self.colorMsg(m=msg, c="white", title=True, end=end)
@@ -155,95 +181,3 @@ class BaseToolsBox(object):
                 print("  |  ", end=end)
 
 
-class TqdmBar(tqdm):
-    """文件传输进度条tqdm"""
-    def update_to(self, b=1, bsize=1,tsize=None):
-        """tqdm进度条"""
-        offset = 1
-        self.total = bsize * offset
-        self.update(b * offset - self.n)
-        self.n = b * offset
-
-
-def find_config_file():
-    """get all config file list"""
-
-    cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
-    conf_name = "antshell.yml"
-    conf_path0 = ["~/.antshell/", "/etc/antshell/", cwd]
-
-    path0 = os.getenv("ANTSHELL_CONFIG", None)
-    if path0 is not None:
-        if os.path.isdir(path0):
-            conf_path0.insert(0, path0)
-
-    conf_path = list(map(lambda x: os.path.join(x, conf_name), conf_path0))
-
-    for cpath in conf_path:
-        path = os.path.expanduser(cpath)
-        if path and os.path.exists(path) and os.path.isfile(path):
-            break
-    else:
-        path = None
-    return path
-
-
-def load_config():
-    """load config from config file"""
-
-    cpath = find_config_file()
-    if cpath:
-        path = os.path.expanduser(cpath)
-        conf = yaml.load(open(path))
-    else:
-        conf = None
-    return conf
-
-
-def load_argParser():
-    """command line parameter"""
-    conf = load_config()
-    langset = conf.get("langset", LANG.get("default"))
-    lang = LANG[langset]
-
-    usage = """%(prog)s [ -h | --version ] [-l [-m 2] ]
-        [ v | -n 1 | -s 'ip|name' ] [ -G g1>g2 ] [ -A ]
-        [ -e | -a ip [--name tag | --user root | --passwd xx | --port 22 ] | -d ip ]
-        [ -P -c 'cmd1,cmd2,...' ]
-        [ -f file_name [-g file_path | -p dir_path [-F ','] ] ]"""
-    version = "%(prog)s " + __version__
-    parser = argparse.ArgumentParser(
-        prog=__prog__, usage=usage, description=lang["desc"], add_help=False)
-
-    parser.add_argument("v", nargs="?", help="%s" % lang["v"])
-    g1 = parser.add_argument_group("sys arguments")
-    g1.add_argument("-h", "--help", action="help", help=lang["help"])
-    g1.add_argument("--version", action="version", version=version, help=lang["version"])
-    g1.add_argument("--init",dest="init",action="store_true",default=False,help=lang["init"])
-    g1.add_argument("--update",dest="update",action="store_true",default=False,help=lang["update"])
-
-    g2 = parser.add_argument_group("edit arguments")
-    g2.add_argument("-a","--add",dest="add",action="store",type=str,help=lang["add"],metavar="ip")
-    g2.add_argument("-A","--agent",dest="agent",action="store_true",default=False,help=lang["agent"])
-    g2.add_argument("-e","--edit",dest="edit",action="store_true",default=False,help=lang["edit"])
-    g2.add_argument("-d","--delete",dest="dels",action="store",type=str,help=lang["delete"],metavar="ip")
-    g2.add_argument("--name",dest="name",action="store",type=str,help=lang["name"],metavar="tag")
-    g2.add_argument("--user",dest="user",action="store",type=str,help=lang["user"],metavar="root")
-    g2.add_argument("--passwd",dest="passwd",action="store",type=str,help=lang["passwd"],metavar="xxx")
-    g2.add_argument("--port",dest="port",action="store",type=int,help=lang["port"],metavar="22")
-
-    g3 = parser.add_argument_group("host arguments")
-    g3.add_argument("-l",dest="lists",action="store_true",default=False,help=lang["lists"])
-    g3.add_argument("-m","--mode",dest="mode",action="store",type=int,help=lang["mode"],default=0,metavar="2")
-    g3.add_argument("-n",dest="num",action="store",type=int,help=lang["num"],metavar=0)
-    g3.add_argument("-s","--search",dest="search",action="store",type=str,help=lang["search"],metavar="'ip|name'")
-    g3.add_argument("-G",dest="group",action="store",type=str,help=lang["group"],metavar="g1>g2")
-
-    g4 = parser.add_argument_group("manager arguments")
-    g4.add_argument("-P",dest="para",action="store_true",default=False,help=lang["para"])
-    g4.add_argument("-c",dest="commod",action="store",type=str,help=lang["commod"],metavar="'cmd1,cmd2,...'")
-    g4.add_argument("-f","--file",dest="file",action="store",type=str,help=lang["file"],metavar="file_name")
-    g4.add_argument("-g","--get",dest="get",action="store",type=str,help=lang["get"],metavar="file_path")
-    g4.add_argument("-p","--put",dest="put",action="store",type=str,help=lang["put"],metavar="dir_path")
-    g4.add_argument("-F","--fs",dest="fs",action="store",type=str,help=lang["fs"],default=",",metavar="','")
-    return parser

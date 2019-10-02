@@ -8,7 +8,8 @@ CREATE TABLE hosts(
     user varchar(50) NOT NULL,
     passwd varchar(100),
     port int default 22,
-    sudo int default 1,
+    sudo varchar(50) default "",
+    bastion int default 0,
     create_at datetime default (datetime('now', 'localtime')),
     update_at datetime default (datetime('now', 'localtime'))
 );

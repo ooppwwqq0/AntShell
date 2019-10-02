@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
 #|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
@@ -10,14 +13,41 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
+import sys
 __metaclass__ = type
 
-__prog__ = 'AntShell'
-__version__ = '0.6.0'
-__author__  = 'Casstiel'
-__banner__ = """
- _____     _   _____ _       _ _
-|  _  |___| |_|   __| |_ ___| | |
-|     |   |  _|__   |   | -_| | |
-|__|__|_|_|_| |_____|_|_|___|_|_|
-"""
+
+class AntShellError(Exception):
+    '''
+    打印错误信息
+    '''
+
+    def __init__(self, message="", obj=None, show_content=True, suppress_extended_error=False, orig_exc=None):
+        super(AntShellError, self).__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return self.message
+
+class DeBug(object):
+    '''
+    打印debug信息
+    '''
+
+    def __init__(self, message="", debug=False):
+        self.debug = debug
+        self.message = message
+        self.print_message()
+    
+    def __str__(self):
+        return self.message
+    
+    def __repr__(self):
+        return self.message
+    
+    def print_message(self):
+        if self.debug:
+            print(self.message)

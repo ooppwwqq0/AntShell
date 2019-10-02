@@ -155,7 +155,7 @@ def main():
     global conf
     conf = load_config()
     #file_convert_to_db()
-    db_convert_to_file()
+    # db_convert_to_file()
 
 
 if __name__ == "__main__":

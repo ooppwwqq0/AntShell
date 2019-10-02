@@ -1,11 +1,12 @@
-Metadata-Version: 1.1
+Metadata-Version: 1.2
 Name: antshell
-Version: 0.5.10
+Version: 0.6.0
 Summary: AntShell Auto SSH
-Home-page: http://c.isme.pub/AntShell
+Home-page: https://c.isme.pub/AntShell
 Author: Casstiel
 Author-email: emo_ooppwwqq0@163.com
 License: GPLv3+
+Project-URL: Source Code, https://github.com/ooppwwqq0/AntShell
 Description: UNKNOWN
 Platform: UNKNOWN
 Classifier: Development Status :: 5 - Production/Stable
@@ -16,8 +17,13 @@ Classifier: Intended Audience :: System Administrators
 Classifier: License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
 Classifier: Natural Language :: English
 Classifier: Operating System :: POSIX
-Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2
 Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
 Classifier: Topic :: System :: Installation/Setup
 Classifier: Topic :: System :: Systems Administration
 Classifier: Topic :: Utilities
+Requires-Python: >=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*

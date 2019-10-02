@@ -9,7 +9,7 @@ BACK_DIR : .sshkeybak
 
 # default user info
 USER : wangping
-PASS : ''
+PASS : ""
 PORT : 22
 
 # Select the language : zh or en ,default zh
@@ -17,3 +17,11 @@ langset : zh
 
 # red green yellow blue pink blue xx
 banner_color : blue
+
+# bastion config
+BASTION_HOST: baoleiji.isme.pub
+BASTION_PORT: 22
+BASTION_USER: wangping
+BASTION_PASSWD_PREFIX: ""
+BASTION_PASSWD: ""
+BASTION_TOTP: ""

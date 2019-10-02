@@ -13,24 +13,25 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
+from antshell.config import CONFIG
 import os
 import sys
 import sqlite3
 
 
 class getdb(object):
-    """封装数据库操作"""
+    '''
+    初始化数据库
+    '''
 
-    def __init__(self, conf, t="hosts"):
+    def __init__(self, t="hosts"):
         self.t = t
-        self.conf = conf
         self.conn = self.__connect()
         self.db = self.conn.cursor()
 
     @staticmethod
     def __dict_factory(cursor, row):
         """turn data into a dictionary"""
-
         d = {}
         for idx, col in enumerate(cursor.description):
             d[col[0]] = row[idx]
@@ -38,8 +39,7 @@ class getdb(object):
 
     def __connect(self):
         """connect db"""
-
-        dbPath = os.path.expanduser(self.conf.get("DB_FILE"))
+        dbPath = os.path.expanduser(CONFIG.DEFAULT.DB_PATH)
         if dbPath and os.path.isfile(dbPath):
             conn = sqlite3.connect(dbPath)
             conn.row_factory = self.__dict_factory
@@ -85,3 +85,6 @@ class getdb(object):
     def __del__(self):
         self.conn.commit()
         self.conn.close()
+
+DB = getdb
+Hosts = getdb()

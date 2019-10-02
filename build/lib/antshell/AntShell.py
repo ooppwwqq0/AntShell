@@ -13,12 +13,12 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import BaseToolsBox, __banner__
-from antshell.base import load_config, load_argParser
-from antshell.install import init_db, init_conf, file_convert_to_db
-from antshell.paramikos import ParaTools
-from antshell.dbtools import getdb
-from antshell.ssh import SShTools
+from base import BaseToolsBox, __banner__
+from base import load_config, load_argParser
+from install import init_db, init_conf, file_convert_to_db
+from paramikos import ParaTools
+from dbtools import getdb
+from ssh import SShTools
 import math
 import os
 import sys
