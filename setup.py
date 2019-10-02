@@ -21,7 +21,7 @@ except ImportError:
     sys.exit(1)
 
 sys.path.insert(0, os.path.abspath('lib'))
-from antshell.release import __version__, __author__
+from antshell.utils.release import __version__, __author__
 
 PYCRYPTO_DIST = 'pycrypto'
 
@@ -120,7 +120,8 @@ static_setup_params = dict(
     package_data={
         '': [
             'sql/*.sql',
-            'config/base.yml',
+            'config/antshell.yml',
+            'config/antshell.cfg',
         ]
     },
     classifiers=[

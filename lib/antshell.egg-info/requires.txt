@@ -5,3 +5,4 @@ pyte
 tqdm
 gevent
 setuptools
+configParser
