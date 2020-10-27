@@ -26,6 +26,9 @@ def init_db():
 
     dbPath = os.path.expanduser(CONFIG.DEFAULT.DB_PATH)
     if dbPath:
+        db_dir = os.path.dirname(dbPath)
+        if not os.path.isdir(db_dir):
+            os.makedirs(db_dir)
         cwd = os.path.dirname(os.path.realpath(__file__))
         sql_path = os.path.join(cwd, "sql/init.sql")
         cmd = "sqlite3 %s '.read %s'" %(dbPath, sql_path) \
@@ -47,3 +50,5 @@ def init_conf():
         config_name = "antshell.cfg"
         cwd = os.path.dirname(os.path.realpath(__file__))
         shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
+
+init_db()

@@ -14,31 +14,34 @@
 
 from __future__ import (absolute_import, division, print_function)
 from antshell.config import CONFIG
+from antshell.utils.errors import AntShellError
 import os
 import sys
 import sqlite3
 
 
-class getdb(object):
+class Sqlite(object):
     '''
     初始化数据库
     '''
 
     def __init__(self, t="hosts"):
         self.t = t
-        self.conn = self.__connect()
-        self.db = self.conn.cursor()
+        try:
+            self.conn = self.__connect()
+            self.db = self.conn.cursor()
+        except Exception:
+            raise AntShellError("Can Not Find DB File!")
 
     @staticmethod
     def __dict_factory(cursor, row):
-        """turn data into a dictionary"""
         d = {}
         for idx, col in enumerate(cursor.description):
             d[col[0]] = row[idx]
         return d
 
     def __connect(self):
-        """connect db"""
+        conn = None
         dbPath = os.path.expanduser(CONFIG.DEFAULT.DB_PATH)
         if dbPath and os.path.isfile(dbPath):
             conn = sqlite3.connect(dbPath)
@@ -46,9 +49,9 @@ class getdb(object):
         return conn
 
     def select(self, w=None, **kwargs):
-        sql = """select * from {0} where 1=1 {1} order by sort;"""
+        sql = """select * from {t} where 1=1 {w} order by sort;"""
         if w:
-            sql = sql.format(self.t, w)
+            sql = sql.format(t=self.t, w=w)
         elif kwargs:
             f = "and {0} = '{1}'"
             wheres = [f.format(k, kwargs[k]) for k in kwargs]
@@ -61,30 +64,47 @@ class getdb(object):
 
     def insert(self, **kwargs):
         sql = """insert into {t}({rows}) values({vals});"""
-        if kwargs:
-            row = [key for key in kwargs]
-            val = [str(kwargs[key]) for key in row]
-            rows = ','.join(row)
-            vals = '"' + '","'.join(val) + '"'
-            sql = sql.format(t=self.t, rows=rows, vals=vals)
+        try:
+            if kwargs:
+                row = [key for key in kwargs]
+                val = [str(kwargs[key]) for key in row]
+                rows = ','.join(row)
+                vals = '"' + '","'.join(val) + '"'
+                sql = sql.format(t=self.t, rows=rows, vals=vals)
+                self.db.execute(sql)
+                self.conn.commit()
+                return True
+        except Exception:
+            return False
+
+    def delete(self, pk):
+        sql = """delete from {t} where id = {pk};"""
+        try:
+            sql = sql.format(t=self.t, pk=pk)
             self.db.execute(sql)
             self.conn.commit()
             return True
-        else:
+        except Exception:
             return False
 
-    def delete(self, rid):
-        sql = """delete from {0} where id = {1};"""
-        sql = sql.format(self.t, rid)
-        self.db.execute(sql)
-        return True
-
-    def update(self):
-        pass
+    def update(self, pk, hosts):
+        sql = """update {t} set {rows} where id={pk};"""
+        f = "{0}='{1}'"
+        try:
+            keyList = [f.format(k, hosts[k]) for k in hosts]
+            sql = sql.format(t=self.t, rows=','.join(keyList), pk=pk)
+            self.db.execute(sql)
+            self.conn.commit()
+            return True
+        except Exception:
+            return False
 
     def __del__(self):
-        self.conn.commit()
-        self.conn.close()
+        try:
+            self.conn.commit()
+            self.conn.close()
+        except Exception:
+            raise AntShellError("Can Not Find DB File!")
 
-DB = getdb
-Hosts = getdb()
+DB = Sqlite
+Hosts = DB(t="hosts")

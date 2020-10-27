@@ -15,9 +15,10 @@
 from __future__ import (absolute_import, division, print_function)
 from antshell.utils.release import __prog__, __version__, __banner__
 from antshell.utils.sqlite import Hosts
+from antshell.utils.six import PY3
 import os
 import sys
-if sys.version >= '3':
+if PY3:
     from functools import reduce
 
 
@@ -79,60 +80,66 @@ class BaseToolsBox(object):
         """
         return args.rsplit(fs) if args else False
 
-
     @staticmethod
-    def __getSearch(includes, match, search=""):
-        if includes:
+    def __getSearch(searchList, match, search=""):
+        if searchList:
             if match:
                 search = """and ip in ({0}) """.format(",".join(
-                    list(map(lambda x: "'%s'" % x, includes))))
+                    list(map(lambda x: "'%s'" % x, searchList))))
             else:
                 search = """and ({0})""".format(" or ".join(
                     list(
                         map(lambda x: "name like '%%{0}%%' or ip like '%%{0}%%'".format(x),
-                            includes))))
+                            searchList))))
+        else:
+            search = """and (name like '%%%%' or ip like '%%%%')"""
         return search
 
     def searchHost(self, include=None, pattern=False, match=False, search=""):
-        """获取主机信息, 基于sqlite3
-            include : 用于过滤列表
-            pattern : 开启返回空字典，默认False（不返回）
-            match : 开启精确匹配模式，默认False（模糊匹配）
-        """
+        '''
+        获取主机信息, 基于sqlite3
+        include : 用于过滤列表
+        pattern : 开启返回空字典，默认False（不返回）
+        match : 开启精确匹配模式，默认False（模糊匹配）
+        '''
 
         if include:
             self.search.append(include)
-        if search not in self.search:
+        if search and search not in self.search:
             self.search.append(search)
         match = True if self.isIp(search, True) else match
-        search = self.__getSearch(set(self.search), match)
+        search = self.__getSearch(searchList=set(self.search), match=match)
         hosts = Hosts.select(w=search)
         if not hosts and not pattern:
             hosts = Hosts.select()
         self.Hlen = len(hosts)
         return hosts
 
-
     def __printInfo(self, key, k):
-        user_name = k["sudo"] if k["sudo"] else k["user"]
+        user_name = k['sudo'] if k['sudo'] else k["user"]
+        user_color = "yellow" if k['sudo'] else "green"
+        bastion_color = "yellow" if int(k['bastion']) == 1 else "green"
         h = "{0} {1} {2}@{3}:{4} ".format(
             self.colorMsg(c="yellow", flag=True).format(
                 "{0: >5}".format("[%s]" % str(key))),
+            self.colorMsg(c=bastion_color, flag=True).format(
+                "{0: <24}".format(k["name"][:24])),
+            self.colorMsg(c=user_color, flag=True).format(
+                "{0: >18}".format(user_name[:18])),
             self.colorMsg(c="green", flag=True).format(
-                "{0: <14}".format(k["name"])),
-            self.colorMsg(c="green", flag=True).format(
-                "{0: >12}".format(user_name)),
-            self.colorMsg(c="green", flag=True).format(
-                "{0: >15}".format(k["ip"])),
+                "{0: >15}".format(k["ip"][:15])),
             self.colorMsg(c="green", flag=True).format(
                 "{0: <5}".format(k["port"])),
         )
         return h
 
     def printHosts(self, hosts="", cmode = None, limit=1, offset=15, pmax=0, flag=True):
-        """主机列表输出"""
+        '''
+        主机列表输出
+        '''
+
         hosts = hosts if hosts else self.searchHost()
-        count = 57
+        count = 76
         maxm = int(int(self.columns) / count)
         Hlen = len(hosts)
         if not cmode:
@@ -146,9 +153,9 @@ class BaseToolsBox(object):
         f = (limit-1) * offset + 1
         l = limit * offset + 1
 
-        lines = '{0: >5} {1: <13} {2: >13}@{3: >15}:{4: <5} '
+        lines = '{0: >5} {1: <24} {2: >18}@{3: >15}:{4: <5} '
         msg = lines.format('[ID]', 'NAME', 'User', 'IP', 'PORT')
-        tails = ' All Pages {0: <5} {1: <16} [n/N Back] Pages {2: <5}'
+        tails = ' All Pages {0: <5} {1: <21}[c/C Clear] [n/N Back] Pages {2: <5}'
         tmsg = tails.format('[%s]' %pmax,'','[%s]'%limit)
 
         if not flag:

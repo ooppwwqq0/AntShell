@@ -18,8 +18,8 @@ from antshell.utils.tqdm import TqdmBar
 from antshell.utils.errors import DeBug
 from antshell.bastion import GetBastionConfig, GetPasswdByTotp
 from antshell.config import CONFIG
-from gevent import monkey
-import gevent
+# from gevent import monkey
+# import gevent
 import paramiko
 import datetime, time
 import sys
@@ -35,7 +35,7 @@ except ImportError:
     time.sleep(3)
     sys.exit()
 
-monkey.patch_all()
+# monkey.patch_all()
 
 DEBUG = CONFIG.DEFAULT.DEBUG
 
@@ -190,6 +190,7 @@ class ParaTools(BaseToolsBox):
         pc = [
             pc[option.num - 1],
         ] if option.num else pc
+        print(pc)
         self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
         res_list = []
         tasks = [gevent.spawn(self.para, x, res_list, option) for x in pc]
@@ -310,6 +311,7 @@ class ParaTools(BaseToolsBox):
         self.channel.get_pty(
             term='xterm', height=win_size[0], width=win_size[1])
         self.channel.invoke_shell()
+        self.channel.keep_this = self.channel
         try:
             signal.signal(signal.SIGWINCH, self.set_win_size)
         except:
