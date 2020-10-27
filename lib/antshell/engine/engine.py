@@ -1,14 +1,17 @@
 #!/usr/bin/env python
-# -*- coding:utf-8 -*-
+# -*- coding: utf-8 -*-
+# @Time    : 2020/10/23 5:18 下午
+# @Author  : Parsifal
+# @File    : engine.py
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
-#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
-#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
-#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
-#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
-#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
-#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+# |   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+# |  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+# |       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+# |       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+# |   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+# |__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
 #                                                                        #
 ##########################################################################
 
@@ -18,6 +21,7 @@ import os, sys, re
 import time
 import pyte
 import struct, fcntl
+
 try:
     import termios
 except ImportError:
@@ -25,12 +29,11 @@ except ImportError:
     sys.exit()
 
 
-class SShTools(object):
+class Engine(object):
     """ssh虚拟终端类"""
 
     def __init__(self):
         """初始化"""
-        super(SShTools, self).__init__()
         self.channel = None
         self.vim_flag = False
         self.vim_end_pattern = re.compile(r'\x1b\[\?1049', re.X)
@@ -125,3 +128,6 @@ class SShTools(object):
             self.channel.resize_pty(height=win_size[0], width=win_size[1])
         except Exception:
             pass
+
+    def get_connect(self, k, agent, sudo):
+        pass

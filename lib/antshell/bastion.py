@@ -15,6 +15,7 @@
 from __future__ import (absolute_import, division, print_function)
 from antshell.config import CONFIG
 from antshell.utils.errors import DeBug
+from menu import Classic as Menu
 import os
 import sys
 import shutil
@@ -36,15 +37,17 @@ def GetBastionConfig():
         "user" : CONFIG.BASTION.BASTION_USER,
         "totp" : CONFIG.BASTION.BASTION_TOTP,
     }
+    passwd = ""
     if CONFIG.BASTION.BASTION_TOTP:
-        passwd = CONFIG.BASTION.BASTION_PASSWD_PREFIX + GetPasswdByTotp(CONFIG.BASTION.BASTION_TOTP)
+        passwd = GetPasswdByTotp(CONFIG.BASTION.BASTION_TOTP)
+    if passwd:
+        passwd = CONFIG.BASTION.BASTION_PASSWD_PREFIX + passwd
     else:
         info = bastionInfo.get("user") + "@" + bastionInfo.get("host") + ":" + str(bastionInfo.get("port")) + "'s password: PIN:****** + Token:"
         passwd = CONFIG.BASTION.BASTION_PASSWD_PREFIX + str(input(info))
     bastionInfo["passwd"] = passwd
 
     DeBug(bastionInfo, DEBUG)
-
     return bastionInfo
 
 
@@ -52,10 +55,14 @@ def GetPasswdByTotp(totp):
     '''
     根据堡垒机totp获取动态密码
     '''
-
-    passwd = subprocess.check_output(['oathtool', '-b', '--totp', totp, ]).rstrip(b'\n')
-    return passwd.decode()
+    
+    try:
+        passwd = subprocess.check_output(['oathtool', '-b', '--totp', totp, ]).rstrip(b'\n')
+        return passwd.decode()
+    except Exception:
+        Menu.colorMsg("Warning: oathtool is not exists!\nPlease execute 'brew install oath-toolkit' to install!\n")
+        return False
 
 
 if __name__ == "__main__":
-    print(GetPasswdByTotp("7K3J2K5CUZGKADQR"))
+    print(GetBastionConfig())

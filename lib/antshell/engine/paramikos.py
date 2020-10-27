@@ -13,13 +13,11 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import BaseToolsBox
 from antshell.utils.tqdm import TqdmBar
-from antshell.utils.errors import DeBug
-from antshell.bastion import GetBastionConfig, GetPasswdByTotp
+from bastion import GetBastionConfig, GetPasswdByTotp
 from antshell.config import CONFIG
-from gevent import monkey
-import gevent
+# from gevent import monkey
+# import gevent
 import paramiko
 import datetime, time
 import sys
@@ -27,7 +25,7 @@ import os
 import fcntl, errno, signal, socket, select
 import getpass
 from binascii import hexlify
-
+from engine.engine import Engine
 try:
     import termios
     import tty
@@ -35,11 +33,11 @@ except ImportError:
     time.sleep(3)
     sys.exit()
 
-monkey.patch_all()
+# monkey.patch_all()
 
 DEBUG = CONFIG.DEFAULT.DEBUG
 
-class ParaTools(BaseToolsBox):
+class ParaEngine(Engine):
     '''
     paramiko操作封装
     '''
@@ -85,7 +83,7 @@ class ParaTools(BaseToolsBox):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             pkey = self.auth_key()
-            BASTION = k.get("bastion")
+            BASTION = k.bastion
             if BASTION:
                 bastion = GetBastionConfig()
                 
@@ -98,10 +96,10 @@ class ParaTools(BaseToolsBox):
                     look_for_keys=False)
             elif pkey:
                 ssh.connect(
-                    hostname=k.get("ip"),
-                    port=int(k.get("port")),
-                    username=k.get("user"),
-                    password=k.get("passwd"),
+                    hostname=k.ip,
+                    port=int(k.port),
+                    username=k.user,
+                    password=k.passwd,
                     pkey=pkey,
                     allow_agent=True,
                     look_for_keys=True)
@@ -113,7 +111,7 @@ class ParaTools(BaseToolsBox):
     def paraComm(k, p, ch, cmds):
         """远程执行命令"""
 
-        res = {"ip":k.get("ip"),"cmds":{}}
+        res = {"ip":k.ip,"cmds":{}}
         for cmd in cmds:
             if k["sudo"] == '1' and k["user"] != "root":
                 cmd = "sudo " + cmd
@@ -190,6 +188,7 @@ class ParaTools(BaseToolsBox):
         pc = [
             pc[option.num - 1],
         ] if option.num else pc
+        print(pc)
         self.colorMsg("=== Starting %s ===" % datetime.datetime.now())
         res_list = []
         tasks = [gevent.spawn(self.para, x, res_list, option) for x in pc]
@@ -252,12 +251,12 @@ class ParaTools(BaseToolsBox):
                     except socket.timeout:
                         pass
                 # 堡垒机模式
-                if k.get("bastion") == 1 and bastion_mode:
-                    self.channel.send(k.get("ip") + " " + str(k.get("port")) + "\r")
+                if k.bastion == 1 and bastion_mode:
+                    self.channel.send(k.ip + " " + str(k.port) + "\r")
                     bastion_mode = False
                 # sudo模式
-                elif k.get("sudo") and sudo_mode:
-                    sudo_user = sudo if sudo else k.get("sudo")
+                elif k.sudo and sudo_mode:
+                    sudo_user = sudo if sudo else k.sudo
                     self.channel.send("sudo -iu " + sudo_user + "\r")
                     sudo_mode = False
                 # 接收用户输入发送到server
@@ -310,6 +309,7 @@ class ParaTools(BaseToolsBox):
         self.channel.get_pty(
             term='xterm', height=win_size[0], width=win_size[1])
         self.channel.invoke_shell()
+        self.channel.keep_this = self.channel
         try:
             signal.signal(signal.SIGWINCH, self.set_win_size)
         except:
@@ -319,3 +319,5 @@ class ParaTools(BaseToolsBox):
 
         channel.close()
         tran.close()
+
+Para = ParaEngine()

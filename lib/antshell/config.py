@@ -3,12 +3,12 @@
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
-#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
-#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
-#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
-#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
-#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
-#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+# |   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+# |  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+# |       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+# |       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+# |   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+# |__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
 #                                                                        #
 ##########################################################################
 
@@ -27,6 +27,8 @@ else:
 
 INI_TYPE = "ini"
 YAML_TYPE = "yaml"
+DEFAULT_PATH = "~/.antshell"
+CONFIG_NAME = "antshell.cfg"
 
 
 class AntConfigParser(configparser.ConfigParser):
@@ -56,8 +58,9 @@ def config_switch(config):
     将字典动态转换为类属性
     '''
 
-    class o: 
+    class o:
         keys = []
+        
         @classmethod
         def get_keys(cls):
             return cls.keys
@@ -82,15 +85,14 @@ def find_config_file():
     '''
 
     cwd = os.path.dirname(os.path.realpath(sys.argv[0]))
-    config_name = "antshell.cfg"
-    base_path_list = ["~/.antshell/", "/etc/antshell/", cwd]
+    base_path_list = [DEFAULT_PATH, "/etc/antshell/", cwd]
 
     custom_path = os.getenv("ANTSHELL_CONFIG", None)
     if custom_path is not None:
         if os.path.isdir(custom_path):
             base_path_list.insert(0, custom_path)
 
-    config_path_list = list(map(lambda x: os.path.join(x, config_name), base_path_list))
+    config_path_list = list(map(lambda x: os.path.join(x, CONFIG_NAME), base_path_list))
 
     for config in config_path_list:
         config_path = os.path.expanduser(config)
@@ -105,7 +107,7 @@ def load_config():
     '''
     加载配置文件
     '''
-    
+
     config = None
     config_file = find_config_file()
     if config_file is None:
@@ -129,7 +131,6 @@ def load_config():
     return config
 
 
-
 def init_conf():
     '''
     初始化配置文件
@@ -137,13 +138,17 @@ def init_conf():
 
     path = find_config_file()
     if not path:
-        default_path= "~/.antshell"
-        dpath = os.path.expanduser(default_path)
+        dpath = os.path.expanduser(DEFAULT_PATH)
         if not os.path.exists(dpath):
             os.makedirs(dpath)
-        config_name = "antshell.cfg"
         cwd = os.path.dirname(os.path.realpath(__file__))
-        shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
+        try:
+            shutil.copy(os.path.join(cwd, "config/", CONFIG_NAME), os.path.join(dpath, CONFIG_NAME))
+        except Exception as e:
+            print("Error Can't Copy Config, Please Run: ")
+            print("  mkdir -p " + dpath)
+            print("  cp " + os.path.join(cwd, "config/", CONFIG_NAME) + " " + os.path.join(dpath, CONFIG_NAME))
+
 
 try:
     config = load_config()
@@ -151,7 +156,6 @@ try:
 except AntShellError:
     print("Load Config Error, Auto Init Config!")
     init_conf()
-
 
 if __name__ == "__main__":
     config = load_config()

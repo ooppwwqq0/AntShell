@@ -4,10 +4,11 @@
 # packages, not optional ones, and with the widest range of versions that could
 # be suitable)
 PyYAML
+pexpect
 paramiko
-ansible
 pyte
 tqdm
 gevent
 setuptools
 configParser
+sqlalchemy

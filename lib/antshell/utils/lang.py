@@ -31,7 +31,7 @@ LANG = {
         "get" : "获取文件路径",
         "put" : "指定文件路径",
         "group" : "过滤群组主机",
-        "lists" : "输出主机列表并退出",
+        "list" : "输出主机列表并退出",
         "mode" : "列表显示列数1-5",
         "num" : "选择连接的主机编号",
         "para" : "paramiko模式",
@@ -45,7 +45,8 @@ LANG = {
         "port" : "端口",
         "agent" : "开启agent模式",
         "bastion" : "堡垒机模式",
-        "sudo" : "指定sudo用户"
+        "sudo" : "指定sudo用户",
+        "engine" : "指定引擎",
     },
     "en" : {
         "init" : "Initialize the configuration file and the database",
@@ -60,7 +61,7 @@ LANG = {
         "get" : "get file_path",
         "put" : "put file_path",
         "group" : "filter group host info",
-        "lists" : "list host info and exit",
+        "list" : "list host info and exit",
         "mode" : "list shows the number of columns 1-5",
         "num" : "choose host num to login",
         "para" : "paramiko pattern",
@@ -74,6 +75,8 @@ LANG = {
         "port" : "ports",
         "agent" : "open agent mode",
         "bastion" : "bastion mode",
-        "sudo" : "sudo user"
+        "sudo" : "sudo user",
+        "engine" : "choose engine",
+
     }
 }

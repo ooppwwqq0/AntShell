@@ -1,6 +1,6 @@
 PyYAML
+pexpect
 paramiko
-ansible
 pyte
 tqdm
 gevent
