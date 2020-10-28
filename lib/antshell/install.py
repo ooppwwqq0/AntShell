@@ -36,19 +36,4 @@ def init_db():
         os.system(cmd) if cmd else ""
 
 
-def init_conf():
-    '''
-    初始化配置文件
-    '''
-
-    path = find_config_file()
-    if not path:
-        default_path= "~/.antshell"
-        dpath = os.path.expanduser(default_path)
-        if not os.path.exists(dpath):
-            os.makedirs(dpath)
-        config_name = "antshell.cfg"
-        cwd = os.path.dirname(os.path.realpath(__file__))
-        shutil.copy(os.path.join(cwd, "config/", config_name), os.path.join(dpath, config_name))
-
 init_db()

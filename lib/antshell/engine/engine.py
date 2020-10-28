@@ -6,27 +6,29 @@
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
-# |   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
-# |  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
-# |       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
-# |       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
-# |   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
-# |__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
 #                                                                        #
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from binascii import hexlify
-import os, sys, re
+import sys, re, os
 import time
 import pyte
 import struct, fcntl
+from antshell.utils.six import PY3
 
 try:
     import termios
 except ImportError:
     time.sleep(3)
     sys.exit()
+if PY3:
+    from functools import reduce
 
 
 class Engine(object):
@@ -128,6 +130,18 @@ class Engine(object):
             self.channel.resize_pty(height=win_size[0], width=win_size[1])
         except Exception:
             pass
+
+    @staticmethod
+    def getPath(paths, L=False):
+        """Absolute path generation"""
+        return reduce(lambda x, y: os.path.join(x, y), paths)
+
+    @staticmethod
+    def getArgs(args="", fs=","):
+        """Processing parameters
+            args : parameters
+        """
+        return args.rsplit(fs) if args else False
 
     def get_connect(self, k, agent, sudo):
         pass

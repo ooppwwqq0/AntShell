@@ -4,5 +4,4 @@
 # @Author  : Parsifal
 # @File    : __init__.py.py
 
-from menu.classic import Classic
-
+from antshell.menu.classic import Classic

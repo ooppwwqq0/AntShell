@@ -6,13 +6,8 @@
 
 
 from __future__ import (absolute_import, division, print_function)
-from engine.paramikos import Para
-from engine.expect import Expect
 
 __metaclass__ = type
 
-
-class Engine(object):
-
-    def get_connect(self, k, agent, sudo):
-        pass
+from antshell.engine.paramikos import Para
+from antshell.engine.expect import Expect

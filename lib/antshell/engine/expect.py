@@ -3,27 +3,23 @@
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
-# |   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
-# |  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
-# |       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
-# |       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
-# |   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
-# |__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
 #                                                                        #
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.utils.errors import DeBug
+import pexpect
+import time
+import sys
+
 from antshell.bastion import GetBastionConfig, GetPasswdByTotp
 from antshell.config import CONFIG
-import pexpect
-import datetime, time
-import sys
-import os
-import fcntl, errno, signal, socket, select
-import getpass
-from binascii import hexlify
-from engine.engine import Engine
+from antshell.engine.engine import Engine
 
 try:
     import termios

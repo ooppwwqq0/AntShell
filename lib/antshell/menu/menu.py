@@ -5,13 +5,16 @@
 # @File    : menu.py
 
 import os
+from sqlalchemy import or_
 
+from antshell.models import SESSION, Hosts
 
 
 class BaseMenu:
 
     def __init__(self):
         self.rows, self.columns = os.popen("stty size", "r").read().split()
+        self.search = []
         self.Hlen = 0
 
     @staticmethod
@@ -36,6 +39,57 @@ class BaseMenu:
             print(msg, end=end)
             return msg
 
+    @staticmethod
+    def isIp(ipaddr, c=False):
+        """ip match
+            ipaddr : ip
+            c : Dan IP number, default False
+        """
+
+        if not ipaddr:
+            return False
+        q = ipaddr.strip().split('.')
+        l = 4 if c else len(q)
+        qi = map(int, filter(lambda x: x.isdigit(), q))
+        return len(q) == l and len(
+            list(filter(lambda x: x >= 0 and x <= 255, qi))) == l
+
+    def set_search(self, search):
+        if search and (search not in self.search):
+            self.search.append(search)
+
+    def clear_search(self):
+        self.search = []
+
+    def search_hosts(self, include=None, pattern=False, match=False, search=""):
+        '''
+        获取主机信息, 基于sqlite3
+        include : 用于过滤列表
+        pattern : 开启返回空字典，默认False（不返回）
+        match : 开启精确匹配模式，默认False（模糊匹配）
+        '''
+        if include:
+            self.set_search(include)
+        self.set_search(search)
+        match = True if self.isIp(search, True) else match
+        if self.search:
+            if match:
+                hosts = SESSION.query(Hosts).filter(Hosts.ip.in_(list(map(lambda x: "%s" % x, self.search)))).all()
+            else:
+                hosts = SESSION.query(Hosts).filter(
+                    or_(*list(map(lambda x: Hosts.ip.like('%%{0}%%'.format(x)), self.search)),
+                        *list(map(lambda x: Hosts.name.like('%%{0}%%'.format(x)), self.search)))).all()
+        else:
+            hosts = SESSION.query(Hosts).all()
+
+        if not hosts and not pattern:
+            try:
+                hosts = SESSION.query(Hosts).all()
+            except Exception as e:
+                return []
+        self.Hlen = len(hosts)
+        return hosts
+
     def title(self):
         pass
 
@@ -49,3 +103,5 @@ class BaseMenu:
         """
         pass
 
+    def view(self, v, num, search, mode, default_page):
+        pass

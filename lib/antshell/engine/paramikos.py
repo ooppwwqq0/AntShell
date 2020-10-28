@@ -13,11 +13,6 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.utils.tqdm import TqdmBar
-from bastion import GetBastionConfig, GetPasswdByTotp
-from antshell.config import CONFIG
-# from gevent import monkey
-# import gevent
 import paramiko
 import datetime, time
 import sys
@@ -25,7 +20,14 @@ import os
 import fcntl, errno, signal, socket, select
 import getpass
 from binascii import hexlify
-from engine.engine import Engine
+# from gevent import monkey
+# import gevent
+
+from antshell.utils.tqdm import TqdmBar
+from antshell.bastion import GetBastionConfig, GetPasswdByTotp
+from antshell.config import CONFIG
+from antshell.engine.engine import Engine
+
 try:
     import termios
     import tty
@@ -36,6 +38,7 @@ except ImportError:
 # monkey.patch_all()
 
 DEBUG = CONFIG.DEFAULT.DEBUG
+
 
 class ParaEngine(Engine):
     '''
@@ -86,7 +89,7 @@ class ParaEngine(Engine):
             BASTION = k.bastion
             if BASTION:
                 bastion = GetBastionConfig()
-                
+
                 ssh.connect(
                     hostname=bastion.get("host"),
                     port=int(bastion.get("port")),
@@ -111,7 +114,7 @@ class ParaEngine(Engine):
     def paraComm(k, p, ch, cmds):
         """远程执行命令"""
 
-        res = {"ip":k.ip,"cmds":{}}
+        res = {"ip": k.ip, "cmds": {}}
         for cmd in cmds:
             if k["sudo"] == '1' and k["user"] != "root":
                 cmd = "sudo " + cmd
@@ -134,7 +137,7 @@ class ParaEngine(Engine):
     def paraSftp(self, sftp, k, option):
         """远程文件传输"""
 
-        self.colorMsg("%s start >>>" % k["ip"], c = "blue")
+        self.colorMsg("%s start >>>" % k["ip"], c="blue")
         try:
             file_name = option.file if option.file else os.path.basename(
                 option.get)
@@ -143,7 +146,7 @@ class ParaEngine(Engine):
                 localpath = self.getPath([self.base_path, file_name])
                 self.colorMsg("  remote path : " + remotepath +
                               "  >>>  local path : " + localpath, "yellow")
-                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                with TqdmBar(unit='B', unit_scale=True, miniters=1, desc=" " * 8 + file_name) as t:
                     sftp.get(remotepath, localpath, callback=t.update_to)
                 print("\t下载文件成功")
             elif option.put:
@@ -151,7 +154,7 @@ class ParaEngine(Engine):
                 remotepath = self.getPath([option.put, option.file])
                 self.colorMsg("  local path : " + localpath +
                               "  >>>  remote path : " + remotepath, "yellow")
-                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                with TqdmBar(unit='B', unit_scale=True, miniters=1, desc=" " * 8 + file_name) as t:
                     sftp.put(localpath, remotepath, callback=t.update_to)
                 print('\t上传文件成功')
         except Exception as e:
@@ -319,5 +322,6 @@ class ParaEngine(Engine):
 
         channel.close()
         tran.close()
+
 
 Para = ParaEngine()
