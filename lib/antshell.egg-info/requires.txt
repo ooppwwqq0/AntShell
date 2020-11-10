@@ -1,0 +1,6 @@
+PyYAML
+paramiko
+ansible
+pyte
+tqdm
+setuptools
