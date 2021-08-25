@@ -3,12 +3,12 @@
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
-#|   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
-#|  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
-#|       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
-#|       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
-#|   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
-#|__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
+# |   _   ||  |  | ||       ||       ||  | |  ||       ||   |    |   |    #
+# |  |_|  ||   |_| ||_     _||  _____||  |_|  ||    ___||   |    |   |    #
+# |       ||       |  |   |  | |_____ |       ||   |___ |   |    |   |    #
+# |       ||  _    |  |   |  |_____  ||       ||    ___||   |___ |   |___ #
+# |   _   || | |   |  |   |   _____| ||   _   ||   |___ |       ||       |#
+# |__| |__||_|  |__|  |___|  |_______||__| |__||_______||_______||_______|#
 #                                                                        #
 ##########################################################################
 
@@ -21,13 +21,12 @@ try:
 except:
     sys.exit()
 
-from antshell.install import init_db
 from antshell.utils.parser import load_argParser
 from antshell.utils.errors import DeBug
 from antshell.utils.six import PY2
-from antshell.models import SESSION, Hosts
 from antshell.engine import Para, Expect
 from antshell.menu import Classic as Menu
+from antshell.models import SESSION, Groups, Hosts
 
 if PY2:
     input = raw_input
@@ -43,14 +42,15 @@ class HostView(object):
     '''
 
     def __init__(self):
-        self.check_record()
+        if not option.add:
+            self.check_record()
         self.HOME = os.environ["HOME"]
 
     def addList(self):
         '''
         添加主机信息
         '''
-        if self.isIp(option.add, True):
+        if Menu.isIp(option.add, True):
             Menu.set_search(option.add)
             hosts = SESSION.query(Hosts).filter_by(
                 ip=option.add, user=option.user if option.user else CONFIG.USER.USERNAME,
@@ -146,15 +146,13 @@ def main():
     option = parser.parse_args()
 
     try:
-        if option.init:
-            init_db()
-            sys.exit()
-
         h = HostView()
         if option.list:
-            hosts = h.search_hosts()
+            hosts = Menu.search_hosts()
+            Menu.title()
             Menu.print(hosts=hosts, cmode=option.mode)
             sys.exit()
+
         elif option.add:
             h.addList()
         # # elif option.para or option.get or option.put:

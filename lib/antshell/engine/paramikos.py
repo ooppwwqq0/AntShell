@@ -216,6 +216,7 @@ class ParaEngine(Engine):
         input_mode = False
         sudo_mode = False if agent else True
         bastion_mode = True
+        lang_mode = True
         try:
             tty.setraw(sys.stdin.fileno())
             tty.setcbreak(sys.stdin.fileno())
@@ -239,6 +240,8 @@ class ParaEngine(Engine):
                         len_x = len(x)
                         if x == b'sudo -iu\r\n' and not sudo_mode:
                             continue
+                        if x == b'export LANG=en_US.UTF-8;export LC_ALL=en_US.UTF-8;export LC_CTYPE=en_US.UTF-8\r\n' and not lang_mode:
+                            continue
                         while index < len_x:
                             try:
                                 n = os.write(sys.stdout.fileno(), x[index:])
@@ -257,6 +260,9 @@ class ParaEngine(Engine):
                 if k.bastion == 1 and bastion_mode:
                     self.channel.send(k.ip + " " + str(k.port) + "\r")
                     bastion_mode = False
+                elif lang_mode:
+                    self.channel.send("export LANG=en_US.UTF-8;export LC_ALL=en_US.UTF-8;export LC_CTYPE=en_US.UTF-8\r")
+                    lang_mode = False
                 # sudo模式
                 elif k.sudo and sudo_mode:
                     sudo_user = sudo if sudo else k.sudo

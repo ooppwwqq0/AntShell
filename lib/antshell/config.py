@@ -152,10 +152,13 @@ def init_conf():
 
 try:
     config = load_config()
-    CONFIG = config_switch(config)
 except AntShellError:
     print("Load Config Error, Auto Init Config!")
     init_conf()
+    config = load_config()
+
+CONFIG = config_switch(config)
+
 
 if __name__ == "__main__":
     config = load_config()

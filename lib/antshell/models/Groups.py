@@ -11,9 +11,9 @@ Base = declarative_base()
 
 
 # 定义映射类User，其继承上一步创建的Base
-class Hosts(Base):
+class Groups(Base):
     # 指定本类映射到users表
-    __tablename__ = 'hosts'
+    __tablename__ = 'groups'
     # 如果有多个类指向同一张表，那么在后边的类需要把extend_existing设为True，表示在已有列基础上进行扩展
     # 或者换句话说，sqlalchemy允许类是表的字集
     # __table_args__ = {'extend_existing': True}
@@ -29,7 +29,6 @@ class Hosts(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     sort = Column(Integer, default=0)
     name = Column(String(50))
-    ip = Column(String(16))
     user = Column(String(50))
     passwd = Column(String(100))
     port = Column(Integer, default=22)
@@ -40,25 +39,6 @@ class Hosts(Base):
 
     # __repr__方法用于输出该类的对象被print()时输出的字符串，如果不想写可以不写
     def __repr__(self):
-        return "<Hosts(name='%s', %s(%s)@%s:%s)>" % (
-            self.name, self.user, self.sudo, self.ip, self.port)
+        return "<Groups(name='%s', %s(%s)@%s:%s)>" % (
+            self.name, self.user, self.sudo, self.port)
 
-
-if __name__ == "__main__":
-    import os
-    from antshell.config import CONFIG
-    from sqlalchemy import create_engine
-
-    dbPath = os.path.expanduser(CONFIG.DEFAULT.DB_PATH)
-    print(dbPath)
-    engine = create_engine('sqlite:///' + dbPath + '?check_same_thread=False', echo=True)
-    from sqlalchemy.orm import sessionmaker
-
-    # engine是2.2中创建的连接
-    Session = sessionmaker(bind=engine)
-
-    # 创建Session类实例
-    SESSION = Session()
-    hosts = SESSION.query(Hosts)
-    for i in hosts:
-        print(i.name)

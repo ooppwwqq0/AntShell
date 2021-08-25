@@ -96,7 +96,6 @@ class ClassicMenu(BaseMenu):
         '''
         用户交互形式选定主机
         '''
-        print("asdasds")
         if v:
             try:
                 num = int(v)

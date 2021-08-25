@@ -9,7 +9,6 @@ lib/antshell/AntShell.py
 lib/antshell/__init__.py
 lib/antshell/bastion.py
 lib/antshell/config.py
-lib/antshell/install.py
 lib/antshell.egg-info/PKG-INFO
 lib/antshell.egg-info/SOURCES.txt
 lib/antshell.egg-info/dependency_links.txt
@@ -23,16 +22,14 @@ lib/antshell/engine/__init__.py
 lib/antshell/engine/engine.py
 lib/antshell/engine/expect.py
 lib/antshell/engine/paramikos.py
-lib/antshell/engine/__pycache__/__init__.cpython-37.pyc
-lib/antshell/engine/__pycache__/expect.cpython-37.pyc
-lib/antshell/engine/__pycache__/paramikos.cpython-37.pyc
 lib/antshell/menu/__init__.py
 lib/antshell/menu/classic.py
 lib/antshell/menu/menu.py
-lib/antshell/menu/__pycache__/__init__.cpython-37.pyc
-lib/antshell/menu/__pycache__/classic.cpython-37.pyc
+lib/antshell/models/Groups.py
 lib/antshell/models/Hosts.py
 lib/antshell/models/__init__.py
+lib/antshell/models/__pycache__/Groups.cpython-37.pyc
+lib/antshell/models/__pycache__/__init__.cpython-37.pyc
 lib/antshell/sql/init.sql
 lib/antshell/utils/__init__.py
 lib/antshell/utils/errors.py
