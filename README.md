@@ -18,6 +18,10 @@
                                            |___/
 ```
 
+AntShell项目已通过Go语言重构，新版本将在Go版本继续更新，python版本不再进行更新
+
+[Go版本地址](https://github.com/ooppwwqq0/AntShell-Go)
+
 > 2017年9月14日正式更名AntShell（原名Adam）
 
 ## 功能参数解析

@@ -13,13 +13,6 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import BaseToolsBox
-from antshell.utils.tqdm import TqdmBar
-from antshell.utils.errors import DeBug
-from antshell.bastion import GetBastionConfig, GetPasswdByTotp
-from antshell.config import CONFIG
-# from gevent import monkey
-# import gevent
 import paramiko
 import datetime, time
 import sys
@@ -27,6 +20,13 @@ import os
 import fcntl, errno, signal, socket, select
 import getpass
 from binascii import hexlify
+# from gevent import monkey
+# import gevent
+
+from antshell.utils.tqdm import TqdmBar
+from antshell.bastion import GetBastionConfig, GetPasswdByTotp
+from antshell.config import CONFIG
+from antshell.engine.engine import Engine
 
 try:
     import termios
@@ -39,7 +39,8 @@ except ImportError:
 
 DEBUG = CONFIG.DEFAULT.DEBUG
 
-class ParaTools(BaseToolsBox):
+
+class ParaEngine(Engine):
     '''
     paramiko操作封装
     '''
@@ -85,10 +86,10 @@ class ParaTools(BaseToolsBox):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             pkey = self.auth_key()
-            BASTION = k.get("bastion")
+            BASTION = k.bastion
             if BASTION:
                 bastion = GetBastionConfig()
-                
+
                 ssh.connect(
                     hostname=bastion.get("host"),
                     port=int(bastion.get("port")),
@@ -98,10 +99,10 @@ class ParaTools(BaseToolsBox):
                     look_for_keys=False)
             elif pkey:
                 ssh.connect(
-                    hostname=k.get("ip"),
-                    port=int(k.get("port")),
-                    username=k.get("user"),
-                    password=k.get("passwd"),
+                    hostname=k.ip,
+                    port=int(k.port),
+                    username=k.user,
+                    password=k.passwd,
                     pkey=pkey,
                     allow_agent=True,
                     look_for_keys=True)
@@ -113,7 +114,7 @@ class ParaTools(BaseToolsBox):
     def paraComm(k, p, ch, cmds):
         """远程执行命令"""
 
-        res = {"ip":k.get("ip"),"cmds":{}}
+        res = {"ip": k.ip, "cmds": {}}
         for cmd in cmds:
             if k["sudo"] == '1' and k["user"] != "root":
                 cmd = "sudo " + cmd
@@ -136,7 +137,7 @@ class ParaTools(BaseToolsBox):
     def paraSftp(self, sftp, k, option):
         """远程文件传输"""
 
-        self.colorMsg("%s start >>>" % k["ip"], c = "blue")
+        self.colorMsg("%s start >>>" % k["ip"], c="blue")
         try:
             file_name = option.file if option.file else os.path.basename(
                 option.get)
@@ -145,7 +146,7 @@ class ParaTools(BaseToolsBox):
                 localpath = self.getPath([self.base_path, file_name])
                 self.colorMsg("  remote path : " + remotepath +
                               "  >>>  local path : " + localpath, "yellow")
-                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                with TqdmBar(unit='B', unit_scale=True, miniters=1, desc=" " * 8 + file_name) as t:
                     sftp.get(remotepath, localpath, callback=t.update_to)
                 print("\t下载文件成功")
             elif option.put:
@@ -153,7 +154,7 @@ class ParaTools(BaseToolsBox):
                 remotepath = self.getPath([option.put, option.file])
                 self.colorMsg("  local path : " + localpath +
                               "  >>>  remote path : " + remotepath, "yellow")
-                with TqdmBar(unit='B', unit_scale=True, miniters=1,desc=" "*8 + file_name) as t:
+                with TqdmBar(unit='B', unit_scale=True, miniters=1, desc=" " * 8 + file_name) as t:
                     sftp.put(localpath, remotepath, callback=t.update_to)
                 print('\t上传文件成功')
         except Exception as e:
@@ -215,6 +216,7 @@ class ParaTools(BaseToolsBox):
         input_mode = False
         sudo_mode = False if agent else True
         bastion_mode = True
+        lang_mode = True
         try:
             tty.setraw(sys.stdin.fileno())
             tty.setcbreak(sys.stdin.fileno())
@@ -238,6 +240,8 @@ class ParaTools(BaseToolsBox):
                         len_x = len(x)
                         if x == b'sudo -iu\r\n' and not sudo_mode:
                             continue
+                        if x == b'export LANG=en_US.UTF-8;export LC_ALL=en_US.UTF-8;export LC_CTYPE=en_US.UTF-8\r\n' and not lang_mode:
+                            continue
                         while index < len_x:
                             try:
                                 n = os.write(sys.stdout.fileno(), x[index:])
@@ -253,12 +257,15 @@ class ParaTools(BaseToolsBox):
                     except socket.timeout:
                         pass
                 # 堡垒机模式
-                if k.get("bastion") == 1 and bastion_mode:
-                    self.channel.send(k.get("ip") + " " + str(k.get("port")) + "\r")
+                if k.bastion == 1 and bastion_mode:
+                    self.channel.send(k.ip + " " + str(k.port) + "\r")
                     bastion_mode = False
+                elif lang_mode:
+                    self.channel.send("export LANG=en_US.UTF-8;export LC_ALL=en_US.UTF-8;export LC_CTYPE=en_US.UTF-8\r")
+                    lang_mode = False
                 # sudo模式
-                elif k.get("sudo") and sudo_mode:
-                    sudo_user = sudo if sudo else k.get("sudo")
+                elif k.sudo and sudo_mode:
+                    sudo_user = sudo if sudo else k.sudo
                     self.channel.send("sudo -iu " + sudo_user + "\r")
                     sudo_mode = False
                 # 接收用户输入发送到server
@@ -321,3 +328,6 @@ class ParaTools(BaseToolsBox):
 
         channel.close()
         tran.close()
+
+
+Para = ParaEngine()

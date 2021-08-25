@@ -13,15 +13,11 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
+import subprocess
+
 from antshell.config import CONFIG
 from antshell.utils.errors import DeBug
-from antshell.base import BaseToolsBox
-import os
-import sys
-import shutil
-import time
-import subprocess
-import datetime
+from antshell.menu import Classic as Menu
 
 DEBUG = CONFIG.DEFAULT.DEBUG
 
@@ -32,10 +28,10 @@ def GetBastionConfig():
     '''
 
     bastionInfo = {
-        "host" : CONFIG.BASTION.BASTION_HOST,
-        "port" : CONFIG.BASTION.BASTION_PORT,
-        "user" : CONFIG.BASTION.BASTION_USER,
-        "totp" : CONFIG.BASTION.BASTION_TOTP,
+        "host": CONFIG.BASTION.BASTION_HOST,
+        "port": CONFIG.BASTION.BASTION_PORT,
+        "user": CONFIG.BASTION.BASTION_USER,
+        "totp": CONFIG.BASTION.BASTION_TOTP,
     }
     passwd = ""
     if CONFIG.BASTION.BASTION_TOTP:
@@ -43,7 +39,8 @@ def GetBastionConfig():
     if passwd:
         passwd = CONFIG.BASTION.BASTION_PASSWD_PREFIX + passwd
     else:
-        info = bastionInfo.get("user") + "@" + bastionInfo.get("host") + ":" + str(bastionInfo.get("port")) + "'s password: PIN:****** + Token:"
+        info = bastionInfo.get("user") + "@" + bastionInfo.get("host") + ":" + str(
+            bastionInfo.get("port")) + "'s password: PIN:****** + Token:"
         passwd = CONFIG.BASTION.BASTION_PASSWD_PREFIX + str(input(info))
     bastionInfo["passwd"] = passwd
 
@@ -55,12 +52,12 @@ def GetPasswdByTotp(totp):
     '''
     根据堡垒机totp获取动态密码
     '''
-    
+
     try:
         passwd = subprocess.check_output(['oathtool', '-b', '--totp', totp, ]).rstrip(b'\n')
         return passwd.decode()
     except Exception:
-        BaseToolsBox().colorMsg("Warning: oathtool is not exists!\nPlease execute 'brew install oath-toolkit' to install!\n")
+        Menu.colorMsg("Warning: oathtool is not exists!\nPlease execute 'brew install oath-toolkit' to install!\n")
         return False
 
 

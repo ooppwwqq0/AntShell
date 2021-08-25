@@ -16,11 +16,12 @@ _PY3_MIN = sys.version_info[:2] >= (3, 5)
 _PY2_MIN = (2, 6) <= sys.version_info[:2] < (3,)
 _PY_MIN = _PY3_MIN or _PY2_MIN
 if not _PY_MIN:
-    raise SystemExit('ERROR: Ansible requires a minimum of Python2 version 2.6 or Python3 version 3.5. Current version: %s' % ''.join(sys.version.splitlines()))
+    raise SystemExit('ERROR: AntShell requires a minimum of Python2 version 2.6 or Python3 version 3.5. Current version: %s' % ''.join(sys.version.splitlines()))
 
 try:
     from antshell.AntShell import main
 except ImportError as e:
+    print(e)
     print("load error")
     sys.exit()
 

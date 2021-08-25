@@ -13,17 +13,13 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from antshell.base import BaseToolsBox
-from antshell.utils.errors import DeBug
+import pexpect
+import time
+import sys
+
 from antshell.bastion import GetBastionConfig, GetPasswdByTotp
 from antshell.config import CONFIG
-import pexpect
-import datetime, time
-import sys
-import os
-import fcntl, errno, signal, socket, select
-import getpass
-from binascii import hexlify
+from antshell.engine.engine import Engine
 
 try:
     import termios
@@ -32,19 +28,18 @@ except ImportError:
     time.sleep(3)
     sys.exit()
 
-
 DEBUG = CONFIG.DEFAULT.DEBUG
 
-class Expect(BaseToolsBox):
-    """处理连接主机"""
 
+class ExpectEngine(Engine):
+    """处理连接主机"""
 
     def exsend(self, e, line):
         e.logfile = None
         e.sendline(line)
         e.logfile = sys.stdout.buffer
 
-    def exConn(self, k, sudo):
+    def get_connect(self, k, agent, sudo):
         """采用pexcept模块执行"""
         BASTION = k.get("bastion")
         if BASTION:
@@ -98,3 +93,6 @@ class Expect(BaseToolsBox):
             print("TIMEOUT")
         finally:
             e.close()
+
+
+Expect = ExpectEngine()

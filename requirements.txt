@@ -11,3 +11,4 @@ tqdm
 gevent
 setuptools
 configParser
+sqlalchemy

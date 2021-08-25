@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-# -*- coding:utf-8 -*-
+# -*- coding: utf-8 -*-
+# @Time    : 2020/10/23 5:18 下午
+# @Author  : Parsifal
+# @File    : engine.py
 
 ##########################################################################
 # _______  __    _  _______  _______  __   __  _______  ___      ___     #
@@ -13,24 +16,26 @@
 ##########################################################################
 
 from __future__ import (absolute_import, division, print_function)
-from binascii import hexlify
-import os, sys, re
+import sys, re, os
 import time
 import pyte
 import struct, fcntl
+from antshell.utils.six import PY3
+
 try:
     import termios
 except ImportError:
     time.sleep(3)
     sys.exit()
+if PY3:
+    from functools import reduce
 
 
-class SShTools(object):
+class Engine(object):
     """ssh虚拟终端类"""
 
     def __init__(self):
         """初始化"""
-        super(SShTools, self).__init__()
         self.channel = None
         self.vim_flag = False
         self.vim_end_pattern = re.compile(r'\x1b\[\?1049', re.X)
@@ -125,3 +130,18 @@ class SShTools(object):
             self.channel.resize_pty(height=win_size[0], width=win_size[1])
         except Exception:
             pass
+
+    @staticmethod
+    def getPath(paths, L=False):
+        """Absolute path generation"""
+        return reduce(lambda x, y: os.path.join(x, y), paths)
+
+    @staticmethod
+    def getArgs(args="", fs=","):
+        """Processing parameters
+            args : parameters
+        """
+        return args.rsplit(fs) if args else False
+
+    def get_connect(self, k, agent, sudo):
+        pass
